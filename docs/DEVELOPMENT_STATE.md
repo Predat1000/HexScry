@@ -17,13 +17,15 @@ AxiomRE currently supports one deliberately narrow native-analysis path:
 9. attach analyst-owned aliases/comments;
 10. save and reopen `.axiomre` project state after verifying the target SHA-256.
 
-The renderer does not consume raw REA/Ghidra JSON and has no direct Node.js or filesystem access.
+The renderer does not consume raw REA/Ghidra JSON and has no direct Node.js or filesystem access. The desktop denies renderer-driven top-level navigation, child windows and webview attachment; IPC strings/byte-window lengths are validated at the main-process boundary. Explicit binary/project opens refresh the provider session transactionally so an invalid replacement cannot leave path/report state split or reuse stale Ghidra analysis.
+
+Foundation PE reads are capped at 512 MiB before allocation, and selected `.axiomre` project files are capped at 4 MiB before JSON parsing. Project creation and parsing share annotation/navigation validation so AxiomRE does not write project files it would later reject.
 
 ## Regression baseline
 
-`npm run check` regenerates the project-owned deterministic PE fixture and currently runs 30 tests:
+`npm run check` regenerates the project-owned deterministic PE fixture and currently runs 33 tests:
 
-- 15 core tests;
+- 18 core tests;
 - 15 provider-adapter tests.
 
 The deterministic fixture is `fixtures/pe/minimal-x64.exe`. It is produced entirely by `scripts/generate-fixtures.mjs` and contains one minimal x64 entry function.

@@ -63,3 +63,18 @@ test("rejects oversized analyst annotations", () => {
     /alias annotation is invalid/,
   );
 });
+
+
+test("writer rejects annotations that the project reader would reject", () => {
+  assert.throws(
+    () => createProject(report, null, { aliases: {}, comments: { "0x140001000": "x".repeat(4001) } }),
+    /comment annotation is invalid/,
+  );
+});
+
+test("writer rejects an invalid selected procedure instead of creating an unreadable project", () => {
+  assert.throws(
+    () => createProject(report, ""),
+    /selected procedure is invalid/,
+  );
+});

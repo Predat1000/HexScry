@@ -28,6 +28,8 @@ export function createProject(
   selectedProcedure: string | null = null,
   annotations: AnalystAnnotations = { aliases: {}, comments: {} },
 ): AxiomProjectV1 {
+  const normalizedAnnotations = parseAnnotations(annotations);
+  const normalizedProcedure = parseSelectedProcedure(selectedProcedure);
   return {
     schema: "axiomre-project",
     version: 1,
@@ -35,11 +37,8 @@ export function createProject(
       path: report.path,
       sha256: report.sha256,
     },
-    navigation: { selectedProcedure },
-    annotations: {
-      aliases: { ...annotations.aliases },
-      comments: { ...annotations.comments },
-    },
+    navigation: { selectedProcedure: normalizedProcedure },
+    annotations: normalizedAnnotations,
   };
 }
 
@@ -62,6 +61,25 @@ function parseAnnotationMap(value: unknown, label: string, maxLength: number): R
     normalized[address] = text;
   }
   return normalized;
+}
+
+function parseSelectedProcedure(value: unknown): string | null {
+  if (value === null) return null;
+  if (typeof value !== "string" || value.length === 0 || value.length > 512) {
+    throw new Error("Project selected procedure is invalid.");
+  }
+  return value;
+}
+
+function parseAnnotations(value: unknown): AnalystAnnotations {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error("Project annotations are invalid.");
+  }
+  const record = value as Record<string, unknown>;
+  return {
+    aliases: parseAnnotationMap(record.aliases, "alias", MAX_ALIAS_LENGTH),
+    comments: parseAnnotationMap(record.comments, "comment", MAX_COMMENT_LENGTH),
+  };
 }
 
 export function parseProject(text: string): AxiomProjectV1 {
@@ -97,22 +115,10 @@ export function parseProject(text: string): AxiomProjectV1 {
   if (typeof targetRecord.sha256 !== "string" || !SHA256.test(targetRecord.sha256)) {
     throw new Error("Project target SHA-256 is invalid.");
   }
-  const selectedProcedure = navigationRecord.selectedProcedure;
-  if (selectedProcedure !== null && typeof selectedProcedure !== "string") {
-    throw new Error("Project selected procedure is invalid.");
-  }
-
-  const annotations = project.annotations;
-  let aliases: Record<string, string> = {};
-  let comments: Record<string, string> = {};
-  if (annotations !== undefined) {
-    if (!annotations || typeof annotations !== "object" || Array.isArray(annotations)) {
-      throw new Error("Project annotations are invalid.");
-    }
-    const annotationRecord = annotations as Record<string, unknown>;
-    aliases = parseAnnotationMap(annotationRecord.aliases, "alias", MAX_ALIAS_LENGTH);
-    comments = parseAnnotationMap(annotationRecord.comments, "comment", MAX_COMMENT_LENGTH);
-  }
+  const selectedProcedure = parseSelectedProcedure(navigationRecord.selectedProcedure);
+  const annotations = project.annotations === undefined
+    ? { aliases: {}, comments: {} }
+    : parseAnnotations(project.annotations);
 
   return {
     schema: "axiomre-project",
@@ -122,7 +128,7 @@ export function parseProject(text: string): AxiomProjectV1 {
       sha256: targetRecord.sha256,
     },
     navigation: { selectedProcedure },
-    annotations: { aliases, comments },
+    annotations,
   };
 }
 

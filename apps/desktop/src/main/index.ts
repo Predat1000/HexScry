@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { join } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
@@ -40,6 +40,32 @@ interface HexWindowResult {
   file: BinaryWindow;
   memory: MemoryByteWindow | null;
   memoryError: string | null;
+}
+
+const MAX_PROJECT_FILE_BYTES = 4 * 1024 * 1024;
+
+function requireIpcString(value: unknown, label: string, maxLength = 512): string {
+  if (typeof value !== "string" || value.length === 0 || value.length > maxLength) {
+    throw new Error(`${label} must be a non-empty string no longer than ${maxLength} characters.`);
+  }
+  return value;
+}
+
+function requireByteReadLength(value: unknown): number {
+  if (value === undefined) return 256;
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 1 || value > 4096) {
+    throw new Error("Byte window length must be an integer between 1 and 4096.");
+  }
+  return value;
+}
+
+async function readProjectText(path: string): Promise<string> {
+  const info = await stat(path);
+  if (!info.isFile()) throw new Error("AxiomRE project is not a regular file.");
+  if (info.size > MAX_PROJECT_FILE_BYTES) {
+    throw new Error("AxiomRE project exceeds the 4 MiB safety limit.");
+  }
+  return readFile(path, "utf8");
 }
 
 async function getReaSession(): Promise<ReaMcpSession> {
@@ -97,11 +123,20 @@ function createWindow(): void {
 
   mainWindow.once("ready-to-show", () => mainWindow.show());
 
-  if (!app.isPackaged && process.env.ELECTRON_RENDERER_URL) {
-    void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL);
-  } else {
-    void mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
-  }
+  // The preload bridge is privileged. Never let renderer-controlled links or scripts
+  // navigate this BrowserWindow to a different document or open a child window that
+  // could inherit an unexpected trust context.
+  mainWindow.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  mainWindow.webContents.on("will-attach-webview", (event) => event.preventDefault());
+
+  const lockRendererNavigation = (): void => {
+    mainWindow.webContents.on("will-navigate", (event) => event.preventDefault());
+  };
+
+  const load = !app.isPackaged && process.env.ELECTRON_RENDERER_URL
+    ? mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
+    : mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
+  void load.then(lockRendererNavigation);
 }
 
 app.whenReady().then(() => {
@@ -122,15 +157,22 @@ app.whenReady().then(() => {
     });
     if (selected.canceled || !selected.filePaths[0]) return null;
     const nextPath = selected.filePaths[0];
+
+    // Parse successfully before mutating target state. A rejected/invalid file must not
+    // leave the main process pointing at a path that disagrees with the renderer report.
+    const nextReport = await inspectBinary(nextPath);
+
     deepAnalysisController?.abort(new Error("Target changed."));
     deepAnalysisController = null;
-    if (reaSession && currentBinaryPath !== nextPath) {
+    // An explicit open is also a refresh. Close even when the path is identical so a
+    // binary replaced in-place cannot inherit a stale provider analysis session.
+    if (reaSession) {
       await reaSession.close();
       reaSession = null;
     }
     currentBinaryPath = nextPath;
-    currentBinaryReport = await inspectBinary(currentBinaryPath);
-    return currentBinaryReport;
+    currentBinaryReport = nextReport;
+    return nextReport;
   });
 
   ipcMain.handle("project:save", async (_event, selectedProcedure: string | null, annotations: AnalystAnnotations): Promise<string | null> => {
@@ -154,13 +196,15 @@ app.whenReady().then(() => {
     });
     if (selected.canceled || !selected.filePaths[0]) return null;
 
-    const project = parseProject(await readFile(selected.filePaths[0], "utf8"));
+    const project = parseProject(await readProjectText(selected.filePaths[0]));
     const report = await inspectBinary(project.target.path);
     verifyProjectTarget(project, report);
 
     deepAnalysisController?.abort(new Error("Project changed."));
     deepAnalysisController = null;
-    if (reaSession && currentBinaryPath !== report.path) {
+    // Opening a project is an explicit target refresh too. Even an identical path may
+    // have been replaced since the current provider session imported it.
+    if (reaSession) {
       await reaSession.close();
       reaSession = null;
     }
@@ -192,9 +236,9 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle("analysis:function", async (_event, procedure: string): Promise<FunctionDossier> => {
+  ipcMain.handle("analysis:function", async (_event, procedure: unknown): Promise<FunctionDossier> => {
     if (!currentBinaryPath) throw new Error("Open a binary before analyzing a function.");
-    if (!procedure) throw new Error("Select a procedure first.");
+    const procedureId = requireIpcString(procedure, "Procedure identifier");
 
     deepAnalysisController?.abort(new Error("Superseded by a function analysis request."));
     const controller = new AbortController();
@@ -204,7 +248,7 @@ app.whenReady().then(() => {
     try {
       const session = await getReaSession();
       await session.openBinary(target);
-      const dossier = await session.analyzeFunction(procedure, controller.signal);
+      const dossier = await session.analyzeFunction(procedureId, controller.signal);
       if (currentBinaryPath !== target) throw new Error("Target changed during function analysis.");
       return dossier;
     } finally {
@@ -212,45 +256,48 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle("analysis:instruction", async (_event, address: string): Promise<InstructionInspection> => {
+  ipcMain.handle("analysis:instruction", async (_event, address: unknown): Promise<InstructionInspection> => {
     if (!currentBinaryPath) throw new Error("Open a binary before inspecting an instruction.");
+    const inspectedAddress = requireIpcString(address, "Instruction address", 256);
     const target = currentBinaryPath;
     const session = await getReaSession();
     await session.openBinary(target);
-    const inspection = await session.inspectInstruction(address);
+    const inspection = await session.inspectInstruction(inspectedAddress);
     if (currentBinaryPath !== target) throw new Error("Target changed during instruction inspection.");
     return inspection;
   });
 
-  ipcMain.handle("analysis:resolve-address", async (_event, address: string): Promise<ProcedureResolution> => {
+  ipcMain.handle("analysis:resolve-address", async (_event, address: unknown): Promise<ProcedureResolution> => {
     if (!currentBinaryPath) throw new Error("Open a binary before resolving an address.");
+    const resolvedAddress = requireIpcString(address, "Address", 256);
     const target = currentBinaryPath;
     const session = await getReaSession();
     await session.openBinary(target);
-    const resolution = await session.resolveContainingProcedure(address);
+    const resolution = await session.resolveContainingProcedure(resolvedAddress);
     if (currentBinaryPath !== target) throw new Error("Target changed during address resolution.");
     return resolution;
   });
 
-  ipcMain.handle("analysis:hex-window", async (_event, address: string, length = 256): Promise<HexWindowResult> => {
+  ipcMain.handle("analysis:hex-window", async (_event, address: unknown, length: unknown): Promise<HexWindowResult> => {
     if (!currentBinaryPath || !currentBinaryReport) throw new Error("Open a binary before reading bytes.");
-    if (!address) throw new Error("Select an address before reading bytes.");
+    const byteAddress = requireIpcString(address, "Byte-window address", 256);
+    const byteLength = requireByteReadLength(length);
     const target = currentBinaryPath;
     const report = currentBinaryReport;
-    const file = await readBinaryWindowAtAddress(report, address, length);
+    const file = await readBinaryWindowAtAddress(report, byteAddress, byteLength);
 
     let memory: MemoryByteWindow | null = null;
     let memoryError: string | null = null;
     try {
       const session = await getReaSession();
       await session.openBinary(target);
-      memory = await session.readBytes(address, length);
+      memory = await session.readBytes(byteAddress, byteLength);
     } catch (reason) {
       memoryError = reason instanceof Error ? reason.message : String(reason);
     }
 
     if (currentBinaryPath !== target) throw new Error("Target changed during byte read.");
-    return { address, file, memory, memoryError };
+    return { address: byteAddress, file, memory, memoryError };
   });
 
   ipcMain.handle("analysis:cancel-deep", () => {

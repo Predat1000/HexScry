@@ -256,7 +256,7 @@ function parseExports(
     return { exports, limitations: [...limitations, "Export address table is truncated or not file-backed."] };
   }
 
-  const namesByFunction = new Map<number, string>();
+  const namesByFunction = new Map<number, string[]>();
   const boundedNameCount = Math.min(nameCount, MAX_EXPORT_SYMBOLS);
   if (nameCount > MAX_EXPORT_SYMBOLS) {
     limitations.push(`Export name scan is intentionally capped at ${MAX_EXPORT_SYMBOLS} names.`);
@@ -286,7 +286,10 @@ function parseExports(
           continue;
         }
         try {
-          namesByFunction.set(functionIndex, readAsciiZ(buffer, nameOffset, `export name ${nameIndex}`));
+          const name = readAsciiZ(buffer, nameOffset, `export name ${nameIndex}`);
+          const names = namesByFunction.get(functionIndex) ?? [];
+          names.push(name);
+          namesByFunction.set(functionIndex, names);
         } catch (error) {
           limitations.push(error instanceof Error ? error.message : String(error));
         }
@@ -314,12 +317,24 @@ function parseExports(
       }
     }
 
-    exports.push({
-      name: namesByFunction.get(functionIndex) ?? null,
-      ordinal: ordinalBase + functionIndex,
-      rva: functionRva,
-      forwarder,
-    });
+    const names = namesByFunction.get(functionIndex);
+    if (names?.length) {
+      for (const name of names) {
+        exports.push({
+          name,
+          ordinal: ordinalBase + functionIndex,
+          rva: functionRva,
+          forwarder,
+        });
+      }
+    } else {
+      exports.push({
+        name: null,
+        ordinal: ordinalBase + functionIndex,
+        rva: functionRva,
+        forwarder,
+      });
+    }
   }
 
   return { exports, limitations };

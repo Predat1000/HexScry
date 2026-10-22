@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { extractAsciiStrings, parsePortableExecutable } from "../src/index.js";
+import { assertSupportedFoundationPeSize, extractAsciiStrings, MAX_FOUNDATION_PE_BYTES, parsePortableExecutable } from "../src/index.js";
 
 function syntheticPe64(): Buffer {
   const buffer = Buffer.alloc(0x400);
@@ -65,7 +65,7 @@ function syntheticPe64WithExports(): Buffer {
   buffer.writeUInt32LE(0x1180, directory + 12);
   buffer.writeUInt32LE(1, directory + 16);
   buffer.writeUInt32LE(3, directory + 20);
-  buffer.writeUInt32LE(2, directory + 24);
+  buffer.writeUInt32LE(3, directory + 24);
   buffer.writeUInt32LE(0x1140, directory + 28);
   buffer.writeUInt32LE(0x1150, directory + 32);
   buffer.writeUInt32LE(0x1160, directory + 36);
@@ -76,12 +76,15 @@ function syntheticPe64WithExports(): Buffer {
 
   buffer.writeUInt32LE(0x1190, 0x350);
   buffer.writeUInt32LE(0x11a0, 0x354);
+  buffer.writeUInt32LE(0x11b0, 0x358);
   buffer.writeUInt16LE(0, 0x360);
   buffer.writeUInt16LE(1, 0x362);
+  buffer.writeUInt16LE(0, 0x364);
 
   buffer.write("fixture.dll\0", 0x380, "ascii");
   buffer.write("NamedOne\0", 0x390, "ascii");
   buffer.write("Forwarded\0", 0x3a0, "ascii");
+  buffer.write("NamedAlias\0", 0x3b0, "ascii");
   buffer.write("KERNEL32.Sleep\0", 0x3c0, "ascii");
   return buffer;
 }
@@ -108,10 +111,11 @@ test("parses named and ordinal PE32+ imports with IAT RVAs", () => {
   assert.ok(report.limitations.every((item) => !item.includes("does not yet resolve imports")));
 });
 
-test("parses named, ordinal-only and forwarded PE32+ exports", () => {
+test("parses named, aliased, ordinal-only and forwarded PE32+ exports", () => {
   const report = parsePortableExecutable("exports.dll", syntheticPe64WithExports());
   assert.deepEqual(report.exports, [
     { name: "NamedOne", ordinal: 1, rva: 0x1000, forwarder: null },
+    { name: "NamedAlias", ordinal: 1, rva: 0x1000, forwarder: null },
     { name: "Forwarded", ordinal: 2, rva: 0x11c0, forwarder: "KERNEL32.Sleep" },
     { name: null, ordinal: 3, rva: 0x1020, forwarder: null },
   ]);
@@ -127,4 +131,13 @@ test("rejects non-PE input", () => {
 test("extracts printable strings with offsets", () => {
   const strings = extractAsciiStrings(Buffer.from([0, 65, 66, 67, 68, 69, 0, 88, 89]));
   assert.deepEqual(strings, [{ offset: 1, value: "ABCDE" }]);
+});
+
+
+test("rejects oversized PE foundation inputs before allocating the file buffer", () => {
+  assert.doesNotThrow(() => assertSupportedFoundationPeSize(MAX_FOUNDATION_PE_BYTES));
+  assert.throws(
+    () => assertSupportedFoundationPeSize(MAX_FOUNDATION_PE_BYTES + 1),
+    /512 MiB/,
+  );
 });

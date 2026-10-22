@@ -14,6 +14,7 @@ Roadmap items are outcomes, not promises of dates.
 - [x] Bounded PE import parsing (named + ordinal) with IAT RVAs
 - [x] Bounded PE export parsing (named + ordinal-only + forwarders)
 - [x] Provider diagnostics that preserve REA evidence and add only evidence-backed setup hints
+- [x] Transactional target refresh + bounded project/PE input + Electron navigation/IPC hardening
 
 ## v0.1 Alpha — Real reversing workflow
 - [x] Persistent REA/Ghidra MCP session + normalized function inventory
