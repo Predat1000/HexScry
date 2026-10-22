@@ -1,0 +1,17 @@
+node_modules/
+dist/
+out/
+release/
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+coverage/
+.axiomre-dev/
+.dev-evidence/
+WORK_HANDOFF.md
+*.axiomre
+.env
+.env.*
+!.env.example

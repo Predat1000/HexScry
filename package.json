@@ -1,0 +1,32 @@
+{
+  "name": "axiomre",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Open-source reverse engineering workbench for evidence-first human and AI-assisted analysis.",
+  "license": "MPL-2.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "install:electron": "install-electron --no",
+    "fixtures:generate": "node scripts/generate-fixtures.mjs",
+    "smoke:rea": "npm run build:core && npm run build:provider && node scripts/smoke-rea-provider.mjs fixtures/pe/minimal-x64.exe",
+    "verify:checkout": "npm ci && npm run check",
+    "dev": "npm run install:electron && npm run build:core && npm run build:sdk && npm run build:provider && npm run dev -w @axiomre/desktop",
+    "build:core": "npm run build -w @axiomre/core",
+    "build:sdk": "npm run build -w @axiomre/plugin-sdk",
+    "build:provider": "npm run build -w @axiomre/provider-rea",
+    "build:desktop": "npm run build -w @axiomre/desktop",
+    "build": "npm run build:core && npm run build:sdk && npm run build:provider && npm run build:desktop",
+    "typecheck": "npm run build:core && npm run build:provider && npm run typecheck -w @axiomre/core && npm run typecheck -w @axiomre/plugin-sdk && npm run typecheck -w @axiomre/provider-rea && npm run typecheck -w @axiomre/desktop",
+    "test": "npm run test -w @axiomre/core && npm run test -w @axiomre/provider-rea",
+    "check": "npm run fixtures:generate && npm run typecheck && npm run test && npm run build"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

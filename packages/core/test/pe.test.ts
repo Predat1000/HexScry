@@ -1,0 +1,130 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { extractAsciiStrings, parsePortableExecutable } from "../src/index.js";
+
+function syntheticPe64(): Buffer {
+  const buffer = Buffer.alloc(0x400);
+  buffer.writeUInt16LE(0x5a4d, 0);
+  buffer.writeUInt32LE(0x80, 0x3c);
+  buffer.writeUInt32LE(0x00004550, 0x80);
+
+  const coff = 0x84;
+  buffer.writeUInt16LE(0x8664, coff);
+  buffer.writeUInt16LE(1, coff + 2);
+  buffer.writeUInt32LE(1234567890, coff + 4);
+  buffer.writeUInt16LE(0xf0, coff + 16);
+
+  const optional = coff + 20;
+  buffer.writeUInt16LE(0x20b, optional);
+  buffer.writeUInt32LE(0x1234, optional + 16);
+  buffer.writeBigUInt64LE(0x140000000n, optional + 24);
+  buffer.writeUInt32LE(0x200, optional + 60);
+
+  const section = optional + 0xf0;
+  buffer.write(".text\0\0\0", section, "ascii");
+  buffer.writeUInt32LE(0x200, section + 8);
+  buffer.writeUInt32LE(0x1000, section + 12);
+  buffer.writeUInt32LE(0x200, section + 16);
+  buffer.writeUInt32LE(0x200, section + 20);
+  buffer.writeUInt32LE(0x60000020, section + 36);
+
+  buffer.write("hello-axiomre\0", 0x200, "ascii");
+  return buffer;
+}
+
+function syntheticPe64WithImports(): Buffer {
+  const buffer = syntheticPe64();
+  const optional = 0x84 + 20;
+  buffer.writeUInt32LE(16, optional + 108);
+  buffer.writeUInt32LE(0x1100, optional + 120);
+  buffer.writeUInt32LE(40, optional + 124);
+
+  const descriptor = 0x300;
+  buffer.writeUInt32LE(0x1140, descriptor);
+  buffer.writeUInt32LE(0x1180, descriptor + 12);
+  buffer.writeUInt32LE(0x1160, descriptor + 16);
+
+  buffer.writeBigUInt64LE(0x11a0n, 0x340);
+  buffer.writeBigUInt64LE((1n << 63n) | 7n, 0x348);
+  buffer.writeBigUInt64LE(0n, 0x350);
+
+  buffer.write("KERNEL32.dll\0", 0x380, "ascii");
+  buffer.writeUInt16LE(12, 0x3a0);
+  buffer.write("ExitProcess\0", 0x3a2, "ascii");
+  return buffer;
+}
+
+function syntheticPe64WithExports(): Buffer {
+  const buffer = syntheticPe64();
+  const optional = 0x84 + 20;
+  buffer.writeUInt32LE(16, optional + 108);
+  buffer.writeUInt32LE(0x1100, optional + 112);
+  buffer.writeUInt32LE(0xe0, optional + 116);
+
+  const directory = 0x300;
+  buffer.writeUInt32LE(0x1180, directory + 12);
+  buffer.writeUInt32LE(1, directory + 16);
+  buffer.writeUInt32LE(3, directory + 20);
+  buffer.writeUInt32LE(2, directory + 24);
+  buffer.writeUInt32LE(0x1140, directory + 28);
+  buffer.writeUInt32LE(0x1150, directory + 32);
+  buffer.writeUInt32LE(0x1160, directory + 36);
+
+  buffer.writeUInt32LE(0x1000, 0x340);
+  buffer.writeUInt32LE(0x11c0, 0x344);
+  buffer.writeUInt32LE(0x1020, 0x348);
+
+  buffer.writeUInt32LE(0x1190, 0x350);
+  buffer.writeUInt32LE(0x11a0, 0x354);
+  buffer.writeUInt16LE(0, 0x360);
+  buffer.writeUInt16LE(1, 0x362);
+
+  buffer.write("fixture.dll\0", 0x380, "ascii");
+  buffer.write("NamedOne\0", 0x390, "ascii");
+  buffer.write("Forwarded\0", 0x3a0, "ascii");
+  buffer.write("KERNEL32.Sleep\0", 0x3c0, "ascii");
+  return buffer;
+}
+
+test("parses a bounded PE32+ foundation report", () => {
+  const report = parsePortableExecutable("fixture.exe", syntheticPe64());
+  assert.equal(report.format, "PE32+");
+  assert.equal(report.architecture, "x86-64");
+  assert.equal(report.entryPointRva, 0x1234);
+  assert.equal(report.imageBase, "0x140000000");
+  assert.equal(report.sections.length, 1);
+  assert.equal(report.sections[0]?.name, ".text");
+  assert.equal(report.imports.length, 0);
+  assert.equal(report.exports.length, 0);
+  assert.ok(report.strings.some((entry) => entry.value.includes("hello-axiomre")));
+});
+
+test("parses named and ordinal PE32+ imports with IAT RVAs", () => {
+  const report = parsePortableExecutable("imports.exe", syntheticPe64WithImports());
+  assert.deepEqual(report.imports, [
+    { library: "KERNEL32.dll", name: "ExitProcess", ordinal: null, hint: 12, iatRva: 0x1160 },
+    { library: "KERNEL32.dll", name: null, ordinal: 7, hint: null, iatRva: 0x1168 },
+  ]);
+  assert.ok(report.limitations.every((item) => !item.includes("does not yet resolve imports")));
+});
+
+test("parses named, ordinal-only and forwarded PE32+ exports", () => {
+  const report = parsePortableExecutable("exports.dll", syntheticPe64WithExports());
+  assert.deepEqual(report.exports, [
+    { name: "NamedOne", ordinal: 1, rva: 0x1000, forwarder: null },
+    { name: "Forwarded", ordinal: 2, rva: 0x11c0, forwarder: "KERNEL32.Sleep" },
+    { name: null, ordinal: 3, rva: 0x1020, forwarder: null },
+  ]);
+});
+
+test("rejects non-PE input", () => {
+  assert.throws(
+    () => parsePortableExecutable("bad.bin", Buffer.alloc(128)),
+    /missing MZ header/,
+  );
+});
+
+test("extracts printable strings with offsets", () => {
+  const strings = extractAsciiStrings(Buffer.from([0, 65, 66, 67, 68, 69, 0, 88, 89]));
+  assert.deepEqual(strings, [{ offset: 1, value: "ABCDE" }]);
+});

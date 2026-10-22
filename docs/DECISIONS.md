@@ -1,0 +1,31 @@
+# Engineering decisions
+
+## D001 — Working name: AxiomRE
+**Status:** provisional until public launch.
+
+Reason: unblocks development. Branding is cheap to change before external release. We will re-check repository/package/domain collisions before launch.
+
+## D002 — Desktop shell: Electron + React + TypeScript
+**Status:** accepted for the first product stages.
+
+Reason: fastest path to a polished cross-platform workbench with a large contributor pool. Heavy binary analysis is isolated from the renderer. We will not rewrite the application in Rust merely for lower idle RAM; a native migration requires profiling evidence and a clear user benefit.
+
+## D003 — Core/providers separation
+**Status:** accepted.
+
+Reason: AxiomRE must not become a skin whose internal model is synonymous with Ghidra. Provider adapters normalize external results.
+
+## D004 — License: MPL-2.0
+**Status:** accepted, to be revalidated before public launch.
+
+Reason: file-level copyleft keeps modifications to project files open while remaining friendly to a broad plugin/integration ecosystem. Dependencies keep their own licenses.
+
+## D005 — No marginal-complexity improvements
+**Status:** permanent project rule.
+
+A change that creates substantial architecture/maintenance cost for a tiny practical gain is rejected unless profiling or a concrete use case demonstrates otherwise.
+
+## D006 — Clean-room boundary for proprietary tools
+**Status:** permanent project rule.
+
+We may compare documented or observable behavior of proprietary tools where lawful. We do not copy proprietary implementation code, bypass licensing/DRM to obtain it, or incorporate protected assets.

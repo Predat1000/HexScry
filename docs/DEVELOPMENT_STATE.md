@@ -1,0 +1,61 @@
+# Development state
+
+This document summarizes the portable project state for contributors. Machine-specific handoff notes are intentionally kept outside version control.
+
+## Current verified workflow
+
+AxiomRE currently supports one deliberately narrow native-analysis path:
+
+1. open a Windows PE32/PE32+ executable or library;
+2. inspect bounded PE metadata, sections, named/ordinal imports, named/ordinal-only/forwarded exports, strings and SHA-256 with the owned core parser;
+3. start a persistent REA/Ghidra MCP session for deep analysis;
+4. enumerate analyzed procedures;
+5. inspect a provider-neutral function dossier with pseudocode, assembly, callers/callees and typed references;
+6. navigate by canonical address, function name, imported API/DLL or foundation string;
+7. inspect the exact address as decoded instruction, data, non-boundary, undecodable or outside-memory evidence;
+8. compare bounded original file bytes with provider-loaded memory bytes;
+9. attach analyst-owned aliases/comments;
+10. save and reopen `.axiomre` project state after verifying the target SHA-256.
+
+The renderer does not consume raw REA/Ghidra JSON and has no direct Node.js or filesystem access.
+
+## Regression baseline
+
+`npm run check` regenerates the project-owned deterministic PE fixture and currently runs 30 tests:
+
+- 15 core tests;
+- 15 provider-adapter tests.
+
+The deterministic fixture is `fixtures/pe/minimal-x64.exe`. It is produced entirely by `scripts/generate-fixtures.mjs` and contains one minimal x64 entry function.
+
+A real Ghidra/REA smoke against that fixture has verified:
+
+- one recovered local `entry` procedure;
+- persistent-session inventory reuse;
+- function decompilation and assembly;
+- exact instruction decoding at the entry point and `not-instruction-boundary` evidence for an interior byte;
+- interior-address-to-procedure resolution;
+- bounded provider byte reads.
+
+The owned PE import parser has also been exercised against `choice.exe`, recovering 86 imports across seven DLLs without import-table limitations. The export parser has been exercised against `kernel32.dll`, recovering 1,671 exports including 206 forwarders without export-table limitations.
+
+Deep smoke testing is optional because it requires a compatible JDK and Ghidra installation. Core CI does not silently install those external tools.
+
+## Performance observations
+
+The first Ghidra analysis is intentionally expensive compared with later navigation. On recent development runs, the project fixture took roughly 15–18 seconds for the first inventory; repeated inventory was ~4 ms, exact instruction inspection ~5–13 ms, address resolution/byte reads ~7–10 ms, and function analysis stayed below a tenth of a second on the same fixture.
+
+This is why interactive analysis retains one provider session per target rather than spawning one-shot REA CLI commands for every user action.
+
+Performance numbers are observations, not contractual benchmarks; they vary by hardware and provider version.
+
+## Current launch blockers
+
+Before a public v0.1 community launch, the project still needs:
+
+- a hosted CI run on supported platforms;
+- final dependency/license review;
+- branding/name collision review;
+- stable demo/screenshots and contributor onboarding validation.
+
+Do not broaden into a debugger, plugin marketplace or additional binary formats before the PE workflow is reliable and the launch gate in `docs/ROADMAP.md` is satisfied.

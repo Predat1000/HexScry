@@ -1,0 +1,64 @@
+# AxiomRE
+
+> **Pre-alpha / local development.** The project is not ready for public promotion yet.
+
+AxiomRE is an open-source reverse-engineering workbench designed around three ideas:
+
+1. **Evidence first.** Conclusions should link back to bytes, instructions, references, symbols, strings, control flow, or provider evidence.
+2. **Modular engines.** Do not rebuild mature decompilers for vanity. Integrate strong open tooling where that is the reasonable engineering choice, while keeping our own data model and workflows vendor-independent.
+3. **Human + automation.** Automation and AI should accelerate investigation, not hide uncertainty.
+
+## Current vertical slice
+
+The current vertical slice is intentionally narrow but real:
+
+- open a Windows PE file (`.exe` / `.dll`);
+- parse core PE metadata ourselves, with bounded reads;
+- list sections, parse named/ordinal imports with IAT RVAs, parse named/ordinal-only/forwarded exports, extract bounded printable strings and calculate SHA-256;
+- start one persistent REA/Ghidra MCP session per target;
+- inventory local/external procedures after Ghidra analysis;
+- select a local procedure and inspect normalized pseudocode + assembly;
+- navigate resolved callers/callees and typed incoming/outgoing xrefs without exposing provider-specific JSON to the UI;
+- inspect an exact address as decoded instruction, data, non-boundary, undecodable or outside-memory evidence;
+- compare original file bytes with Ghidra's loaded-memory bytes in a bounded hex evidence view;
+- jump by canonical address, function name, imported API/DLL or foundation string using the already-open analysis session;
+- save/open a minimal `.axiomre` project that verifies the target SHA-256 before reuse;
+- persist analyst-owned aliases/comments per function without modifying Ghidra or the executable;
+- regenerate and test a project-owned deterministic PE32+ x64 fixture for legal regression coverage;
+- detect local REA / Ghidra / JADX availability in the desktop workbench.
+
+This proves the primary native-analysis path before we broaden into richer xrefs, graphs, plugins, debugging or additional formats.
+
+## Technology
+
+- Electron + React + TypeScript for the desktop shell;
+- `@axiomre/core` for analysis-domain code that we own;
+- Ghidra as an optional deep native-analysis provider;
+- REA 6.7.0 pinned as an application dependency and wrapped behind `@axiomre/provider-rea`;
+- JADX for Android analysis;
+- a small plugin SDK whose contracts are versioned separately from the UI.
+
+Heavy analysis belongs out of the renderer process.
+
+## Development
+
+```powershell
+npm install
+npm run check
+npm run dev
+```
+
+For a dependency-clean verification equivalent to the CI entry path, run `npm run verify:checkout`. `npm install`/`npm ci` bring the supported REA version. Native Ghidra analysis additionally requires a compatible JDK and `GHIDRA_INSTALL_DIR`; the desktop reports whether those external tools are available instead of silently downloading them.
+
+See `CONTRIBUTING.md` before contributing and `SECURITY.md` for the untrusted-input model and vulnerability-reporting rules.
+
+## Project principles
+
+- Prefer a clear 90–95% solution over a fragile 100% solution.
+- Do not add complexity for marginal benchmark wins.
+- Keep provider-specific details behind adapters.
+- Every meaningful analysis claim should be representable with evidence and confidence.
+- Keep the application useful without cloud AI.
+- Do not copy proprietary implementation code. Proprietary tools may be studied behaviorally/clean-room where lawful; open-source tools are studied under their licenses.
+
+See `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT_STATE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/DEPENDENCY_LICENSES.md`, and `docs/BRANDING_REVIEW.md`.

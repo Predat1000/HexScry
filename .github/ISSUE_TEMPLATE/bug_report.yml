@@ -1,0 +1,69 @@
+name: Bug report
+description: Report a reproducible AxiomRE defect
+title: "[Bug]: "
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve AxiomRE. Do not attach proprietary binaries, credentials, private data, or exploit details that should be reported privately.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Reproduction steps
+      description: Provide the smallest reliable sequence of steps.
+      placeholder: |
+        1. Open ...
+        2. Run ...
+        3. Select ...
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: AxiomRE revision
+      description: Commit SHA or release version if available.
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: toolchain
+    attributes:
+      label: Analysis toolchain
+      description: Include Node, REA, Ghidra/JDK versions when relevant.
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs or evidence
+      description: Paste sanitized logs or describe the test fixture. Do not upload copyrighted/private target binaries.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I reproduced this on the current main branch or clearly identified my revision.
+          required: true
+        - label: I have not included proprietary code, private data, credentials, or unlicensed binary fixtures.
+          required: true
