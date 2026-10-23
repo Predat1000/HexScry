@@ -19,7 +19,7 @@ This checklist is intentionally conservative. HexScry should be public when the 
 - [x] Clean post-rename checkout builds and deep-smokes the Windows portable artifact.
 - [ ] Hosted Windows CI passes from the public/private GitHub remote.
 - [ ] Hosted Linux CI passes from the public/private GitHub remote.
-- [ ] One person outside the primary development session follows only README/CONTRIBUTING and completes a small contribution or onboarding exercise.
+- [ ] One person outside the primary development session follows only README/CONTRIBUTING and completes the validation in `docs/EXTERNAL_ONBOARDING.md`, including one small contribution or meaningful review.
 
 ## Release artifact
 
@@ -43,4 +43,4 @@ This checklist is intentionally conservative. HexScry should be public when the 
 
 ## Launch message
 
-The first announcement must describe what works today, not promise IDA parity. It should show the real demo, name current limits (PE/x86-64-focused vertical slice, Ghidra/JDK needed for deep analysis), link contribution docs, and point newcomers to small well-scoped issues.
+The first announcement must describe what works today, not promise IDA parity. Use `docs/COMMUNITY_LAUNCH_DRAFT.md` as the starting copy, then refresh concrete revision/count/hash details from the final tag. It should show the real demo, name current limits (PE/x86-64-focused vertical slice, Ghidra/JDK needed for deep analysis), link contribution docs, and point newcomers to small well-scoped issues.
