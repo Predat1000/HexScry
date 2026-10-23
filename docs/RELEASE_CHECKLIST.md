@@ -37,6 +37,7 @@ This checklist is intentionally conservative. HexScry should be public when the 
 - [x] `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, roadmap, architecture and decision docs exist.
 - [x] Issue and pull-request templates exist.
 - [x] Machine-specific `WORK_HANDOFF.md`, evidence and release artifacts are ignored.
+- [x] `npm run source:audit` scans tracked/reachable Git history for forbidden local artifacts, absolute user-home paths and high-signal credential patterns; CI and release verification run it with full history.
 - [ ] GitHub remote configured following `docs/GITHUB_BOOTSTRAP.md`.
 - [ ] Branch protection / required CI checks configured where available.
 - [ ] GitHub private vulnerability reporting / Security Advisories enabled so `SECURITY.md` has a real private channel.

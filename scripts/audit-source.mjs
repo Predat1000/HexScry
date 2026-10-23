@@ -17,11 +17,16 @@ const SECRET_PATTERNS = [
   ["GitHub token", /\bgh[pousr]_[A-Za-z0-9]{20,}\b/u],
   ["GitHub fine-grained token", /\bgithub_pat_[A-Za-z0-9_]{20,}\b/u],
   ["OpenAI-style secret", /\bsk-[A-Za-z0-9]{20,}\b/u],
+  ["OpenAI project secret", /\bsk-proj-[A-Za-z0-9_-]{20,}\b/u],
+  ["Anthropic secret", /\bsk-ant-[A-Za-z0-9_-]{20,}\b/u],
+  ["Google API key", /\bAIza[0-9A-Za-z_-]{30,}\b/u],
   ["AWS access key", /\bAKIA[0-9A-Z]{16}\b/u],
 ];
 const PRIVATE_PATH_PATTERNS = [
-  new RegExp(String.raw`C:\\Users\\` + "Chat" + "GPT" + String.raw`(?:\\|\b)`, "iu"),
-  new RegExp("C:/Users/" + "Chat" + "GPT" + "(?:/|\\b)", "iu"),
+  /[A-Za-z]:\\Users\\[^\\\r\n`"' ]+(?:\\|\b)/iu,
+  /[A-Za-z]:\/Users\/[^/\r\n`"' ]+(?:\/|\b)/iu,
+  /\/home\/[^/\s`"']+(?:\/|\b)/u,
+  /\/Users\/[^/\s`"']+(?:\/|\b)/u,
 ];
 
 function git(args, options = {}) {
@@ -98,6 +103,6 @@ if (failures.length > 0) {
 } else {
   console.log(`Source audit: PASS (${tracked.length} tracked files, ${shas.length} reachable Git objects inspected).`);
   console.log("- no forbidden local/evidence/build paths tracked or present in history");
-  console.log("- no NUC-private absolute paths in tracked/reachable text blobs");
+  console.log("- no absolute user-home paths in tracked/reachable text blobs");
   console.log("- no configured high-signal credential patterns in tracked/reachable text blobs");
 }
