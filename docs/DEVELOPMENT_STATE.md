@@ -45,7 +45,7 @@ The owned PE import parser has also been exercised against `choice.exe`, recover
 
 Deep smoke testing is optional because it requires a compatible JDK and Ghidra installation. Core CI does not silently install those external tools.
 
-A separate local clone has been validated from scratch with `npm ci` followed by `npm run check`: dependency installation completed with zero reported vulnerabilities, the optional Frida install script remained unapproved, all 36 tests passed, and the full desktop build completed. The ignored machine-specific `WORK_HANDOFF.md` was absent from that clone as intended. This clean-clone validation was repeated after the base-relocation/Hex-evidence milestone.
+A separate local clone has been validated from scratch with `npm ci` followed by `npm run check`: dependency installation completed with zero reported vulnerabilities, the optional Frida install script remained unapproved, all 39 tests passed, and the full desktop build completed. The ignored machine-specific `WORK_HANDOFF.md` was absent from that clone as intended. This clean-clone validation was repeated after the Debug Directory / CodeView milestone.
 
 The reproducible desktop demo uses the same deterministic fixture and real provider path. `npm run demo:capture` waits until deep analysis has completed and the recovered `entry` procedure is rendered, captures the renderer through Electron's own `capturePage()` API, writes `docs/assets/axiomre-v0.1-demo.png`, and exits. This has been verified end to end on the development host.
 
