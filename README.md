@@ -8,6 +8,10 @@ AxiomRE is an open-source reverse-engineering workbench designed around three id
 2. **Modular engines.** Do not rebuild mature decompilers for vanity. Integrate strong open tooling where that is the reasonable engineering choice, while keeping our own data model and workflows vendor-independent.
 3. **Human + automation.** Automation and AI should accelerate investigation, not hide uncertainty.
 
+![AxiomRE v0.1 pre-alpha demo](docs/assets/axiomre-v0.1-demo.png)
+
+The screenshot above is generated from the project-owned deterministic PE fixture through the real desktop shell and live REA/Ghidra path; it is not a mockup.
+
 ## Current vertical slice
 
 The current vertical slice is intentionally narrow but real:
@@ -47,6 +51,16 @@ npm install
 npm run check
 npm run dev
 ```
+
+### Reproducible demo
+
+```powershell
+npm run demo          # open the project-owned PE fixture with the owned parser
+npm run demo:deep     # fixture + live persistent REA/Ghidra analysis
+npm run demo:capture  # deep demo, capture the stable renderer, then exit
+```
+
+`demo:capture` writes `docs/assets/axiomre-v0.1-demo.png` only after deep analysis has completed and the recovered `entry` procedure is visible. The fixture is generated entirely from project-owned code. Deep demo/capture requires a compatible JDK and Ghidra; these tools are detected rather than silently downloaded.
 
 For a dependency-clean verification equivalent to the CI entry path, run `npm run verify:checkout`. `npm install`/`npm ci` bring the supported REA version. Native Ghidra analysis additionally requires a compatible JDK and `GHIDRA_INSTALL_DIR`; the desktop reports whether those external tools are available instead of silently downloading them.
 

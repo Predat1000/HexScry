@@ -26,7 +26,7 @@ Roadmap items are outcomes, not promises of dates.
 - [x] Hex evidence view comparing original file bytes with Ghidra loaded memory
 - [x] Analyst-owned comments and aliases persisted in `.axiomre` projects
 - [x] Basic project save/load
-- [ ] Screenshot/demo corpus
+- [x] Reproducible real-analysis demo + first screenshot asset
 - [x] Contributor-ready CI, issue/PR templates, security and contribution docs
 
 **Community launch gate:** v0.1 becomes public/promoted only when a clean checkout builds reliably, the demo workflow is real, and documentation is sufficient for an external contributor to fix a small issue without private guidance.

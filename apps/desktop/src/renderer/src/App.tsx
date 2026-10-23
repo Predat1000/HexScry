@@ -179,7 +179,23 @@ export default function App() {
   const [codeView, setCodeView] = useState<"pseudocode" | "assembly" | "references" | "hex" | "instruction">("pseudocode");
 
   useEffect(() => {
-    void window.axiom.toolchain().then(setToolchain);
+    let active = true;
+    void Promise.all([window.axiom.toolchain(), window.axiom.bootstrap()])
+      .then(([nextToolchain, bootstrap]) => {
+        if (!active) return;
+        setToolchain(nextToolchain);
+        if (bootstrap.error) setError(bootstrap.error);
+        if (bootstrap.report) {
+          applyReport(bootstrap.report);
+          if (bootstrap.autoDeep) void deepAnalyze(true);
+        }
+      })
+      .catch((reason) => {
+        if (active) setError(reason instanceof Error ? reason.message : String(reason));
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const visibleStrings = useMemo(() => {
@@ -347,16 +363,18 @@ export default function App() {
     }
   }
 
-  async function deepAnalyze() {
+  async function deepAnalyze(autoSelectFirst = false) {
     setDeepBusy(true);
     setDeepError(null);
     try {
       const nextProcedures = await window.axiom.deepProcedures();
       setProcedures(nextProcedures);
-      if (selectedProcedure) {
-        const restored = nextProcedures.find((procedure) => procedure.address === selectedProcedure && !procedure.external);
-        if (restored) await selectProcedure(restored);
-      }
+      const restored = selectedProcedure
+        ? nextProcedures.find((procedure) => procedure.address === selectedProcedure && !procedure.external)
+        : autoSelectFirst
+          ? nextProcedures.find((procedure) => !procedure.external)
+          : undefined;
+      if (restored) await selectProcedure(restored);
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : String(reason);
       if (!/cancel|aborted/i.test(message)) setDeepError(message);
@@ -480,7 +498,7 @@ export default function App() {
               <span>DEEP ANALYSIS</span>
               <p>Ghidra analyzes once; the live REA session is then reused for fast navigation.</p>
               <div className="deep-actions">
-                <button className="secondary" onClick={deepAnalyze} disabled={deepBusy || !toolchain?.ghidra.available}>
+                <button className="secondary" onClick={() => void deepAnalyze(false)} disabled={deepBusy || !toolchain?.ghidra.available}>
                   {deepBusy ? "Analyzing with Ghidra…" : procedures.length ? "Refresh procedures" : "Analyze with Ghidra"}
                 </button>
                 {deepBusy && <button className="ghost" onClick={cancelDeepAnalysis}>Cancel</button>}

@@ -2,12 +2,16 @@ import { access } from "node:fs/promises";
 import type { FunctionDossier, InstructionInspection, InstructionReference, MemoryByteWindow, ProcedureResolution, ProcedureSummary, ReferenceEdge } from "@axiomre/core";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
-import { defaultReaEntrypoint } from "./reaCli.js";
+import { defaultReaEntrypoint, reaNodeEnvironment } from "./reaCli.js";
 
 export interface ReaMcpOptions {
   entrypoint?: string;
   environment?: NodeJS.ProcessEnv;
 }
+
+const MCP_OPEN_TIMEOUT_MS = 2 * 60_000;
+const MCP_DEEP_ANALYSIS_TIMEOUT_MS = 5 * 60_000;
+const MCP_INTERACTIVE_TIMEOUT_MS = 60_000;
 
 interface ProcedureRow {
   address: string;
@@ -431,7 +435,7 @@ export class ReaMcpSession {
   #targetPath: string | null = null;
 
   constructor(options: ReaMcpOptions = {}) {
-    this.#environment = options.environment ?? process.env;
+    this.#environment = reaNodeEnvironment(options.environment ?? process.env);
     this.#entrypoint = options.entrypoint ?? defaultReaEntrypoint(this.#environment);
   }
 
@@ -467,10 +471,14 @@ export class ReaMcpSession {
   async openBinary(path: string): Promise<void> {
     await this.connect();
     if (this.#targetPath === path) return;
-    const reply = await this.#client!.callTool({
-      name: "open_binary",
-      arguments: { path, provider_id: "ghidra" },
-    });
+    const reply = await this.#client!.callTool(
+      {
+        name: "open_binary",
+        arguments: { path, provider_id: "ghidra" },
+      },
+      undefined,
+      { timeout: MCP_OPEN_TIMEOUT_MS },
+    );
     if (reply.isError) throw providerFailure("open_binary", reply, path);
     this.#targetPath = path;
   }
@@ -482,7 +490,10 @@ export class ReaMcpSession {
     const reply = await this.#client.callTool(
       { name: "list_procedures", arguments: {} },
       undefined,
-      signal ? { signal } : undefined,
+      {
+        timeout: MCP_DEEP_ANALYSIS_TIMEOUT_MS,
+        ...(signal ? { signal } : {}),
+      },
     );
     if (reply.isError) throw providerFailure("list_procedures", reply);
     return parseProcedures(reply.structuredContent);
@@ -496,7 +507,10 @@ export class ReaMcpSession {
     const reply = await this.#client.callTool(
       { name: "analyze_function", arguments: { procedure } },
       undefined,
-      signal ? { signal } : undefined,
+      {
+        timeout: MCP_INTERACTIVE_TIMEOUT_MS,
+        ...(signal ? { signal } : {}),
+      },
     );
     if (reply.isError) throw providerFailure("analyze_function", reply, procedure);
     return parseFunctionDossier(reply.structuredContent);
@@ -510,7 +524,10 @@ export class ReaMcpSession {
     const reply = await this.#client.callTool(
       { name: "inspect_native_instruction", arguments: { address } },
       undefined,
-      signal ? { signal } : undefined,
+      {
+        timeout: MCP_INTERACTIVE_TIMEOUT_MS,
+        ...(signal ? { signal } : {}),
+      },
     );
     if (reply.isError) throw providerFailure("inspect_native_instruction", reply, address);
     return parseInstructionInspection(reply.structuredContent);
@@ -524,7 +541,10 @@ export class ReaMcpSession {
     const reply = await this.#client.callTool(
       { name: "resolve_containing_procedure", arguments: { address } },
       undefined,
-      signal ? { signal } : undefined,
+      {
+        timeout: MCP_INTERACTIVE_TIMEOUT_MS,
+        ...(signal ? { signal } : {}),
+      },
     );
     if (reply.isError) throw providerFailure("resolve_containing_procedure", reply, address);
     return parseProcedureResolution(reply.structuredContent);
@@ -541,7 +561,10 @@ export class ReaMcpSession {
     const reply = await this.#client.callTool(
       { name: "read_bytes", arguments: { address, length } },
       undefined,
-      signal ? { signal } : undefined,
+      {
+        timeout: MCP_INTERACTIVE_TIMEOUT_MS,
+        ...(signal ? { signal } : {}),
+      },
     );
     if (reply.isError) throw providerFailure("read_bytes", reply, address);
     return parseMemoryByteWindow(reply.structuredContent);

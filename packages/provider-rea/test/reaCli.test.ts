@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { __test } from "../src/index.js";
+import { __test, reaNodeEnvironment } from "../src/index.js";
 
 test("normalizes REA procedure search rows", () => {
   const rows = __test.parseSearchProcedures(JSON.stringify({
@@ -28,4 +28,10 @@ test("rejects responses without normalized_result", () => {
     () => __test.parseSearchProcedures(JSON.stringify({ ok: false })),
     /omitted normalized_result/,
   );
+});
+
+test("forces spawned REA scripts to use Electron's Node runtime mode", () => {
+  const environment = reaNodeEnvironment({ PATH: "example", ELECTRON_RUN_AS_NODE: "0" });
+  assert.equal(environment.PATH, "example");
+  assert.equal(environment.ELECTRON_RUN_AS_NODE, "1");
 });

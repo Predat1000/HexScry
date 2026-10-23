@@ -14,7 +14,14 @@ export interface HexWindowResult {
   memoryError: string | null;
 }
 
+export interface BootstrapState {
+  report: BinaryReport | null;
+  autoDeep: boolean;
+  error: string | null;
+}
+
 export interface AxiomApi {
+  bootstrap(): Promise<BootstrapState>;
   openBinary(): Promise<BinaryReport | null>;
   openProject(): Promise<{ report: BinaryReport; selectedProcedure: string | null; annotations: AnalystAnnotations } | null>;
   saveProject(selectedProcedure: string | null, annotations: AnalystAnnotations): Promise<string | null>;
@@ -28,6 +35,7 @@ export interface AxiomApi {
 }
 
 const api: AxiomApi = {
+  bootstrap: () => ipcRenderer.invoke("analysis:bootstrap"),
   openBinary: () => ipcRenderer.invoke("analysis:open-binary"),
   openProject: () => ipcRenderer.invoke("project:open"),
   saveProject: (selectedProcedure, annotations) => ipcRenderer.invoke("project:save", selectedProcedure, annotations),

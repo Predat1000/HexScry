@@ -7,6 +7,7 @@
 - GitHub repository search for `AxiomRE` / `AxiomRE in:name` did not surface an exact reverse-engineering project using that repository name in the reviewed results. Similar names such as AxiomRelay, AxiomRed and AxiomResearch exist.
 - The npm registry returned 404 for the exact unscoped package name `axiomre` at the time of review.
 - General web search surfaced an existing/recently indexed insurance/reinsurance business identity using `AxiomRe` / `AxiomRe, Inc.`. This is a different industry, but it is enough that we should not treat the name as legally cleared merely because developer registries are free.
+- Alternative names were sanity-checked before considering a rename. `Fathom Re` is also used by an existing business, while `HexLoom` is already used by a hex/reverse-engineering tool. Renaming merely to exchange one collision risk for another would create churn without a clear benefit.
 
 ## Decision
 

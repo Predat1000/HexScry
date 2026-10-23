@@ -29,3 +29,13 @@ A change that creates substantial architecture/maintenance cost for a tiny pract
 **Status:** permanent project rule.
 
 We may compare documented or observable behavior of proprietary tools where lawful. We do not copy proprietary implementation code, bypass licensing/DRM to obtain it, or incorporate protected assets.
+
+## D007 — Sandboxed preload stays CommonJS
+**Status:** accepted.
+
+The Electron main process remains ESM, but the sandboxed preload is built explicitly as CommonJS (`index.cjs`). This keeps `contextIsolation` and the sandbox enabled while avoiding preload-module loading ambiguity observed in Electron 45. Do not switch the preload back to ESM unless a supported configuration is proven by a real desktop smoke.
+
+## D008 — REA child processes use Electron's Node mode
+**Status:** accepted.
+
+When AxiomRE launches REA from the Electron main process, `process.execPath` points at `electron.exe`. Provider child processes therefore set `ELECTRON_RUN_AS_NODE=1` so the same `rea.mjs` entrypoint behaves consistently under Electron and ordinary Node. The first procedure inventory may trigger Ghidra auto-analysis and gets a bounded five-minute MCP timeout; later interactive operations remain bounded to one minute and support cancellation.

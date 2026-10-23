@@ -2,7 +2,7 @@ import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import { promisify } from "node:util";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
 import {
@@ -20,7 +20,7 @@ import {
   type ProcedureResolution,
   type ProcedureSummary,
 } from "@axiomre/core";
-import { defaultReaEntrypoint, ReaMcpSession, resolveReaEnvironment } from "@axiomre/provider-rea";
+import { defaultReaEntrypoint, ReaMcpSession, reaNodeEnvironment, resolveReaEnvironment } from "@axiomre/provider-rea";
 
 const execFileAsync = promisify(execFile);
 
@@ -28,6 +28,8 @@ let currentBinaryPath: string | null = null;
 let currentBinaryReport: BinaryReport | null = null;
 let reaSession: ReaMcpSession | null = null;
 let deepAnalysisController: AbortController | null = null;
+let bootstrapError: string | null = null;
+const demoAutoDeep = process.env.AXIOMRE_DEMO_DEEP === "1";
 
 interface ToolStatus {
   rea: { available: boolean; version?: string };
@@ -40,6 +42,12 @@ interface HexWindowResult {
   file: BinaryWindow;
   memory: MemoryByteWindow | null;
   memoryError: string | null;
+}
+
+interface BootstrapState {
+  report: BinaryReport | null;
+  autoDeep: boolean;
+  error: string | null;
 }
 
 const MAX_PROJECT_FILE_BYTES = 4 * 1024 * 1024;
@@ -75,6 +83,23 @@ async function getReaSession(): Promise<ReaMcpSession> {
   return reaSession;
 }
 
+async function loadDemoTargetFromEnvironment(): Promise<void> {
+  const configured = process.env.AXIOMRE_DEMO_TARGET?.trim();
+  if (!configured) return;
+
+  const target = resolve(configured);
+  try {
+    const report = await inspectBinary(target);
+    currentBinaryPath = target;
+    currentBinaryReport = report;
+    bootstrapError = null;
+  } catch (reason) {
+    currentBinaryPath = null;
+    currentBinaryReport = null;
+    bootstrapError = `Demo target could not be opened: ${reason instanceof Error ? reason.message : String(reason)}`;
+  }
+}
+
 async function probeToolchain(): Promise<ToolStatus> {
   const environment = await resolveReaEnvironment(process.env);
   const ghidraPath = environment.GHIDRA_INSTALL_DIR;
@@ -82,8 +107,9 @@ async function probeToolchain(): Promise<ToolStatus> {
 
   let reaVersion: string | undefined;
   try {
-    const reaEntrypoint = defaultReaEntrypoint(process.env);
+    const reaEntrypoint = defaultReaEntrypoint(environment);
     const { stdout } = await execFileAsync(process.execPath, [reaEntrypoint, "--version"], {
+      env: reaNodeEnvironment(environment),
       windowsHide: true,
       timeout: 10_000,
     });
@@ -105,6 +131,37 @@ async function probeToolchain(): Promise<ToolStatus> {
   };
 }
 
+async function captureDemoWhenReady(mainWindow: BrowserWindow): Promise<void> {
+  const configuredPath = process.env.AXIOMRE_DEMO_CAPTURE?.trim();
+  if (!configuredPath) return;
+
+  const capturePath = resolve(configuredPath);
+  const deadline = Date.now() + 120_000;
+  while (!mainWindow.isDestroyed() && Date.now() < deadline) {
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 1_000));
+    const rawState = await mainWindow.webContents.executeJavaScript(
+      `JSON.stringify({hasEntry: document.body.innerText.includes('entry'), analyzing: document.body.innerText.includes('Analyzing with Ghidra'), deepError: document.body.innerText.includes('Deep analysis:')})`,
+    );
+    const state = JSON.parse(rawState) as { hasEntry: boolean; analyzing: boolean; deepError: boolean };
+    if (state.deepError) {
+      console.error("[demo-capture] Deep analysis failed before the demo reached a stable state.");
+      break;
+    }
+    if (state.hasEntry && !state.analyzing) {
+      const image = await mainWindow.webContents.capturePage();
+      await writeFile(capturePath, image.toPNG());
+      console.log(`[demo-capture] ${capturePath}`);
+      if (process.env.AXIOMRE_DEMO_EXIT_AFTER_CAPTURE === "1") app.quit();
+      return;
+    }
+  }
+
+  if (!mainWindow.isDestroyed()) {
+    console.error("[demo-capture] Timed out waiting for a stable deep-analysis demo state.");
+  }
+  if (process.env.AXIOMRE_DEMO_EXIT_AFTER_CAPTURE === "1") app.quit();
+}
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1440,
@@ -114,7 +171,7 @@ function createWindow(): void {
     show: false,
     backgroundColor: "#0f1115",
     webPreferences: {
-      preload: join(__dirname, "../preload/index.mjs"),
+      preload: join(__dirname, "../preload/index.cjs"),
       sandbox: true,
       contextIsolation: true,
       nodeIntegration: false,
@@ -122,6 +179,9 @@ function createWindow(): void {
   });
 
   mainWindow.once("ready-to-show", () => mainWindow.show());
+  mainWindow.webContents.once("did-finish-load", () => {
+    if (!mainWindow.isVisible()) mainWindow.show();
+  });
 
   // The preload bridge is privileged. Never let renderer-controlled links or scripts
   // navigate this BrowserWindow to a different document or open a child window that
@@ -133,18 +193,37 @@ function createWindow(): void {
     mainWindow.webContents.on("will-navigate", (event) => event.preventDefault());
   };
 
+  if (!app.isPackaged) {
+    mainWindow.webContents.on("did-fail-load", (_event, errorCode, errorDescription, validatedURL) => {
+      console.error(`[renderer-load] ${errorCode} ${errorDescription} ${validatedURL}`);
+    });
+    mainWindow.webContents.on("render-process-gone", (_event, details) => {
+      console.error(`[renderer-gone] ${details.reason} exit=${details.exitCode}`);
+    });
+  }
+
   const load = !app.isPackaged && process.env.ELECTRON_RENDERER_URL
     ? mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
     : mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
-  void load.then(lockRendererNavigation);
+  void load.then(() => {
+    lockRendererNavigation();
+    void captureDemoWhenReady(mainWindow);
+  });
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  await loadDemoTargetFromEnvironment();
   electronApp.setAppUserModelId("org.axiomre.workbench");
 
   app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window);
   });
+
+  ipcMain.handle("analysis:bootstrap", (): BootstrapState => ({
+    report: currentBinaryReport,
+    autoDeep: Boolean(currentBinaryReport && demoAutoDeep),
+    error: bootstrapError,
+  }));
 
   ipcMain.handle("analysis:open-binary", async () => {
     const selected = await dialog.showOpenDialog({

@@ -37,6 +37,15 @@ export async function resolveReaEnvironment(
   return environment;
 }
 
+export function reaNodeEnvironment(
+  base: NodeJS.ProcessEnv = process.env,
+): NodeJS.ProcessEnv {
+  return {
+    ...base,
+    ELECTRON_RUN_AS_NODE: "1",
+  };
+}
+
 export interface ReaCliOptions {
   entrypoint?: string;
   environment?: NodeJS.ProcessEnv;
@@ -91,7 +100,7 @@ export class ReaCli {
   readonly #maxBufferBytes: number;
 
   constructor(options: ReaCliOptions = {}) {
-    this.#environment = options.environment ?? process.env;
+    this.#environment = reaNodeEnvironment(options.environment ?? process.env);
     this.#entrypoint = options.entrypoint ?? defaultReaEntrypoint(this.#environment);
     this.#timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.#maxBufferBytes = options.maxBufferBytes ?? DEFAULT_MAX_BUFFER;

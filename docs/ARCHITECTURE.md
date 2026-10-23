@@ -26,6 +26,9 @@ Project database / evidence store (future)
 ### Renderer
 Untrusted UI surface. No direct filesystem access and no Node integration.
 
+### Preload bridge
+Small typed IPC surface exposed through `contextBridge`. The preload is deliberately emitted as CommonJS (`index.cjs`) while remaining sandboxed with context isolation enabled; this is a compatibility boundary, not permission to move application logic into preload.
+
 ### Main process
 Owns file dialogs, filesystem access, process spawning, provider adapters and application services.
 
@@ -35,7 +38,7 @@ Owns stable domain types and parsers that are genuinely useful for us to impleme
 ### Providers
 Provider output is normalized into AxiomRE models. UI code must not learn Ghidra/REA-specific response structures.
 
-Interactive REA/Ghidra access uses one persistent MCP subprocess/session. `open_binary` selects the target, and the first deep inventory request may trigger Ghidra auto-analysis; later navigation reuses that analyzed session. One-shot REA CLI commands remain useful for diagnostics and automation but are deliberately excluded from the interactive hot path because each CLI invocation owns an isolated provider session.
+Interactive REA/Ghidra access uses one persistent MCP subprocess/session. `open_binary` selects the target, and the first deep inventory request may trigger Ghidra auto-analysis; later navigation reuses that analyzed session. When spawned by Electron, REA runs through Electron's Node runtime mode (`ELECTRON_RUN_AS_NODE=1`) so provider behavior matches Node-based smoke tests. The deep inventory request has a bounded five-minute timeout and remains cancelable; interactive requests retain shorter bounds. One-shot REA CLI commands remain useful for diagnostics and automation but are deliberately excluded from the interactive hot path because each CLI invocation owns an isolated provider session.
 
 ### Plugin SDK
 Small, versioned contracts. We will not implement a large plugin runtime before a second real plugin/analyzer proves the abstraction.
