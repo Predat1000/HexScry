@@ -87,4 +87,4 @@ See `CONTRIBUTING.md` before contributing and `SECURITY.md` for the untrusted-in
 - Keep the application useful without cloud AI.
 - Do not copy proprietary implementation code. Proprietary tools may be studied behaviorally/clean-room where lawful; open-source tools are studied under their licenses.
 
-See `CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT_STATE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/DEPENDENCY_LICENSES.md`, `docs/BRANDING_REVIEW.md`, `docs/RELEASE_CHECKLIST.md`, `docs/RELEASE_PROCESS.md`, and `docs/CONTRIBUTOR_BACKLOG.md`.
+See `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT_STATE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/DEPENDENCY_LICENSES.md`, `docs/BRANDING_REVIEW.md`, `docs/RELEASE_CHECKLIST.md`, `docs/RELEASE_PROCESS.md`, and `docs/CONTRIBUTOR_BACKLOG.md`.

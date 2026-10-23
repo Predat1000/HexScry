@@ -1,6 +1,6 @@
 # Contributing to HexScry
 
-HexScry is pre-alpha. Contributions are welcome once the repository is opened publicly, but the current architecture is intentionally narrow while the PE workflow stabilizes.
+HexScry is pre-alpha. Contributions are welcome once the repository is opened publicly, but the current architecture is intentionally narrow while the PE workflow stabilizes. Participation is also subject to `CODE_OF_CONDUCT.md`.
 
 ## Development setup
 
@@ -65,7 +65,7 @@ Keep changes focused. A useful PR should explain:
 - how it was verified;
 - known limitations or follow-up work.
 
-Before requesting review, run `npm run doctor` and `npm run check`. If your change touches the REA/Ghidra adapter and you have the external toolchain installed, also run `npm run smoke:rea`.
+Before requesting review, run `npm run doctor`, `npm run source:audit` and `npm run check`. If your change touches the REA/Ghidra adapter and you have the external toolchain installed, also run `npm run smoke:rea`.
 
 Do not bundle unrelated refactors with feature or bug-fix work unless the refactor is necessary for the change.
 
