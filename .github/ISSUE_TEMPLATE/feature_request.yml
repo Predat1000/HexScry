@@ -1,0 +1,49 @@
+name: Feature proposal
+description: Propose a focused HexScry improvement with a clear user benefit
+title: "[Proposal]: "
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        HexScry intentionally avoids speculative architecture. Strong proposals explain the analyst problem first, then the smallest useful change.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Analyst problem
+      description: What concrete reversing workflow is difficult, slow, unclear, or impossible today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed improvement
+      description: Describe the smallest change that would materially improve that workflow.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or example
+      description: Give a reproducible example, benchmark, screenshot, fixture idea, or comparison when possible. Do not attach proprietary/private binaries.
+
+  - type: textarea
+    id: tradeoffs
+    attributes:
+      label: Complexity and tradeoffs
+      description: What new dependency, architecture surface, maintenance cost, or compatibility risk would this introduce?
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: The proposal solves a concrete workflow problem rather than adding capability for its own sake.
+          required: true
+        - label: I considered whether the same benefit can be achieved with a smaller change or an existing open-source provider.
+          required: true
+        - label: I have not included proprietary code, private data, credentials, or unlicensed binary fixtures.
+          required: true

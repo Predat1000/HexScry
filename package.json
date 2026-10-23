@@ -9,6 +9,7 @@
     "packages/*"
   ],
   "scripts": {
+    "doctor": "node scripts/doctor.mjs",
     "install:electron": "install-electron --no",
     "fixtures:generate": "node scripts/generate-fixtures.mjs",
     "licenses:check": "node scripts/check-licenses.mjs",
@@ -33,7 +34,7 @@
     "check": "npm run fixtures:generate && npm run licenses:check && npm run typecheck && npm run test && npm run build"
   },
   "engines": {
-    "node": ">=24.0.0"
+    "node": "24.x"
   },
   "allowScripts": {
     "esbuild@0.28.2": true

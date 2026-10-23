@@ -8,6 +8,7 @@
 
 ## Verification
 
+- [ ] `npm run doctor`
 - [ ] `npm run check`
 - [ ] `npm run smoke:rea` when the REA/Ghidra adapter is affected and the external toolchain is available
 - [ ] New or changed behavior has regression coverage where practical

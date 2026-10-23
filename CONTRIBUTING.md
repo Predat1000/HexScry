@@ -14,11 +14,12 @@ From a clean checkout:
 
 ```powershell
 npm ci
+npm run doctor
 npm run check
 npm run dev
 ```
 
-`npm run check` regenerates the project-owned PE fixture, runs strict typechecking and tests, then builds every workspace.
+Node.js 24 is the supported development line (`.nvmrc` and `.node-version`). `npm run doctor` checks required workspace/tooling state and reports optional deep-analysis tools separately. `npm run check` regenerates the project-owned PE fixture, runs strict typechecking and tests, then builds every workspace.
 
 REA currently declares Frida as an optional dependency. npm may report its native install script as unapproved; the static Ghidra workflow does not require it, and contributors should not approve optional native install scripts unless a feature explicitly needs them and the security implications have been reviewed.
 
@@ -64,6 +65,8 @@ Keep changes focused. A useful PR should explain:
 - how it was verified;
 - known limitations or follow-up work.
 
-Before requesting review, run `npm run check`. If your change touches the REA/Ghidra adapter and you have the external toolchain installed, also run `npm run smoke:rea`.
+Before requesting review, run `npm run doctor` and `npm run check`. If your change touches the REA/Ghidra adapter and you have the external toolchain installed, also run `npm run smoke:rea`.
 
 Do not bundle unrelated refactors with feature or bug-fix work unless the refactor is necessary for the change.
+
+For launch-sized contribution ideas, see `docs/CONTRIBUTOR_BACKLOG.md`. Items there are candidates rather than permanent commitments; prefer the smallest current issue that still produces a useful analyst-visible or verification improvement.

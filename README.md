@@ -31,7 +31,7 @@ The current vertical slice is intentionally narrow but real:
 - regenerate and test a project-owned deterministic PE32+ x64 fixture for legal regression coverage;
 - detect local REA / Ghidra / JADX availability in the desktop workbench.
 
-This proves the primary native-analysis path before we broaden into richer xrefs, graphs, plugins, debugging or additional formats.
+This proves the primary native-analysis path before we broaden into graphs, plugins, debugging or additional binary formats.
 
 ## Technology
 
@@ -47,10 +47,13 @@ Heavy analysis belongs out of the renderer process.
 ## Development
 
 ```powershell
-npm install
+npm ci
+npm run doctor
 npm run check
 npm run dev
 ```
+
+Node.js 24 is the supported development line (`.nvmrc` / `.node-version`). `npm run doctor` checks the required workspace/tooling state and reports optional deep-analysis dependencies separately, so a missing Ghidra/JDK setup is not confused with a broken core checkout.
 
 ### Reproducible demo
 
@@ -84,4 +87,4 @@ See `CONTRIBUTING.md` before contributing and `SECURITY.md` for the untrusted-in
 - Keep the application useful without cloud AI.
 - Do not copy proprietary implementation code. Proprietary tools may be studied behaviorally/clean-room where lawful; open-source tools are studied under their licenses.
 
-See `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT_STATE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/DEPENDENCY_LICENSES.md`, and `docs/BRANDING_REVIEW.md`.
+See `docs/ARCHITECTURE.md`, `docs/DEVELOPMENT_STATE.md`, `docs/ROADMAP.md`, `docs/DECISIONS.md`, `docs/DEPENDENCY_LICENSES.md`, `docs/BRANDING_REVIEW.md`, `docs/RELEASE_CHECKLIST.md`, and `docs/CONTRIBUTOR_BACKLOG.md`.
