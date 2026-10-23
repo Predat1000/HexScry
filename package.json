@@ -11,6 +11,7 @@
   "scripts": {
     "install:electron": "install-electron --no",
     "fixtures:generate": "node scripts/generate-fixtures.mjs",
+    "licenses:check": "node scripts/check-licenses.mjs",
     "smoke:rea": "npm run build:core && npm run build:provider && node scripts/smoke-rea-provider.mjs fixtures/pe/minimal-x64.exe",
     "verify:checkout": "npm ci && npm run check",
     "dev": "npm run install:electron && npm run build:core && npm run build:sdk && npm run build:provider && npm run dev -w @axiomre/desktop",
@@ -21,7 +22,7 @@
     "build": "npm run build:core && npm run build:sdk && npm run build:provider && npm run build:desktop",
     "typecheck": "npm run build:core && npm run build:provider && npm run typecheck -w @axiomre/core && npm run typecheck -w @axiomre/plugin-sdk && npm run typecheck -w @axiomre/provider-rea && npm run typecheck -w @axiomre/desktop",
     "test": "npm run test -w @axiomre/core && npm run test -w @axiomre/provider-rea",
-    "check": "npm run fixtures:generate && npm run typecheck && npm run test && npm run build"
+    "check": "npm run fixtures:generate && npm run licenses:check && npm run typecheck && npm run test && npm run build"
   },
   "engines": {
     "node": ">=24.0.0"
