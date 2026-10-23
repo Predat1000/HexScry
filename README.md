@@ -18,13 +18,13 @@ The current vertical slice is intentionally narrow but real:
 
 - open a Windows PE file (`.exe` / `.dll`);
 - parse core PE metadata ourselves, with bounded reads;
-- list sections, parse named/ordinal imports with IAT RVAs, parse named/ordinal-only/forwarded exports, extract bounded printable strings and calculate SHA-256;
+- list sections, parse named/ordinal imports with IAT RVAs, parse named/ordinal-only/forwarded exports, parse bounded PE base relocations, extract bounded printable strings and calculate SHA-256;
 - start one persistent REA/Ghidra MCP session per target;
 - inventory local/external procedures after Ghidra analysis;
 - select a local procedure and inspect normalized pseudocode + assembly;
 - navigate resolved callers/callees and typed incoming/outgoing xrefs without exposing provider-specific JSON to the UI;
 - inspect an exact address as decoded instruction, data, non-boundary, undecodable or outside-memory evidence;
-- compare original file bytes with Ghidra's loaded-memory bytes in a bounded hex evidence view;
+- compare original file bytes with Ghidra's loaded-memory bytes in a bounded hex evidence view, marking bytes covered by known PE base relocations so loader fixups are not mistaken for unexplained mutation;
 - jump by canonical address, function name, imported API/DLL or foundation string using the already-open analysis session;
 - save/open a minimal `.axiomre` project that verifies the target SHA-256 before reuse;
 - persist analyst-owned aliases/comments per function without modifying Ghidra or the executable;

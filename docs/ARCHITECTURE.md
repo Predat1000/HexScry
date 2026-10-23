@@ -33,7 +33,7 @@ Small typed IPC surface exposed through `contextBridge`. The preload is delibera
 Owns file dialogs, filesystem access, process spawning, provider adapters and application services.
 
 ### Core
-Owns stable domain types and parsers that are genuinely useful for us to implement. The core must not depend on React/Electron.
+Owns stable domain types and parsers that are genuinely useful for us to implement. The core must not depend on React/Electron. PE base relocations are core evidence: loader-fixup coverage is derived from the file itself and can annotate file-vs-memory differences independently of whichever deep-analysis provider is active.
 
 ### Providers
 Provider output is normalized into AxiomRE models. UI code must not learn Ghidra/REA-specific response structures.

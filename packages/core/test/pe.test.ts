@@ -89,6 +89,24 @@ function syntheticPe64WithExports(): Buffer {
   return buffer;
 }
 
+function syntheticPe64WithRelocations(): Buffer {
+  const buffer = syntheticPe64();
+  const optional = 0x84 + 20;
+  buffer.writeUInt32LE(16, optional + 108);
+
+  const relocationDirectory = optional + 112 + 5 * 8;
+  buffer.writeUInt32LE(0x1100, relocationDirectory);
+  buffer.writeUInt32LE(14, relocationDirectory + 4);
+
+  const block = 0x300;
+  buffer.writeUInt32LE(0x1000, block);
+  buffer.writeUInt32LE(14, block + 4);
+  buffer.writeUInt16LE((10 << 12) | 0x010, block + 8);
+  buffer.writeUInt16LE((3 << 12) | 0x020, block + 10);
+  buffer.writeUInt16LE(0, block + 12);
+  return buffer;
+}
+
 test("parses a bounded PE32+ foundation report", () => {
   const report = parsePortableExecutable("fixture.exe", syntheticPe64());
   assert.equal(report.format, "PE32+");
@@ -99,6 +117,7 @@ test("parses a bounded PE32+ foundation report", () => {
   assert.equal(report.sections[0]?.name, ".text");
   assert.equal(report.imports.length, 0);
   assert.equal(report.exports.length, 0);
+  assert.equal(report.relocations.length, 0);
   assert.ok(report.strings.some((entry) => entry.value.includes("hello-axiomre")));
 });
 
@@ -109,6 +128,23 @@ test("parses named and ordinal PE32+ imports with IAT RVAs", () => {
     { library: "KERNEL32.dll", name: null, ordinal: 7, hint: null, iatRva: 0x1168 },
   ]);
   assert.ok(report.limitations.every((item) => !item.includes("does not yet resolve imports")));
+});
+
+test("parses PE32+ base relocations and ignores ABSOLUTE padding entries", () => {
+  const report = parsePortableExecutable("relocs.exe", syntheticPe64WithRelocations());
+  assert.deepEqual(report.relocations, [
+    { rva: 0x1010, type: 10, typeName: "DIR64", widthBytes: 8 },
+    { rva: 0x1020, type: 3, typeName: "HIGHLOW", widthBytes: 4 },
+  ]);
+  assert.ok(report.limitations.every((item) => !item.includes("does not yet resolve relocations")));
+});
+
+test("reports malformed base-relocation blocks without reading past the declared directory", () => {
+  const buffer = syntheticPe64WithRelocations();
+  buffer.writeUInt32LE(6, 0x300 + 4);
+  const report = parsePortableExecutable("bad-relocs.exe", buffer);
+  assert.deepEqual(report.relocations, []);
+  assert.ok(report.limitations.some((item) => item.includes("invalid size 6")));
 });
 
 test("parses named, aliased, ordinal-only and forwarded PE32+ exports", () => {

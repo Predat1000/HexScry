@@ -231,13 +231,16 @@ dt { color: #727b8a; } dd { margin: 0; text-align: right; font-family: ui-monosp
 
 .hex-view { min-height: 0; overflow: auto; background: #0c0f14; flex: 1; font: 10px/1.45 ui-monospace, SFMono-Regular, Consolas, monospace; }
 .hex-legend { display: flex; justify-content: space-between; gap: 12px; padding: 8px 10px; border-bottom: 1px solid #202630; color: #6f7989; background: #101319; }
+.hex-relocation-summary { padding: 7px 10px; border-bottom: 1px solid #202630; color: #8ea9c8; background: #0f141b; font: 9px/1.4 Inter, ui-sans-serif, system-ui, sans-serif; }
 .hex-header, .hex-row { display: grid; grid-template-columns: 105px minmax(300px, 1fr) minmax(300px, 1fr) 135px; gap: 10px; align-items: center; padding: 6px 10px; }
 .hex-header { position: sticky; top: 0; z-index: 1; color: #657082; background: #11151b; border-bottom: 1px solid #222832; text-transform: uppercase; letter-spacing: .06em; font-size: 8px; }
 .hex-row { border-bottom: 1px solid #181c23; color: #9aa4b3; }
 .hex-row > code:first-child { color: #748095; }
 .hex-cells { display: grid; grid-template-columns: repeat(16, minmax(16px, 1fr)); gap: 3px; white-space: nowrap; }
 .hex-cells span { display: inline-block; text-align: center; color: #aeb7c5; }
+.hex-cells span.relocation { outline: 1px solid #45607f; outline-offset: -1px; border-radius: 3px; }
 .hex-cells span.changed { color: #f0c67a; background: rgba(240, 198, 122, .08); border-radius: 3px; }
+.hex-cells span.changed.relocation { box-shadow: inset 0 0 0 1px #7194ba; }
 .hex-ascii { color: #8993a2; white-space: pre; }
 
 .nav-box { display: flex; align-items: center; gap: 4px; }

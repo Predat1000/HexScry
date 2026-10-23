@@ -13,6 +13,7 @@ Roadmap items are outcomes, not promises of dates.
 - [x] Deterministic self-built x64 PE corpus fixture + regression test
 - [x] Bounded PE import parsing (named + ordinal) with IAT RVAs
 - [x] Bounded PE export parsing (named + ordinal-only + forwarders)
+- [x] Bounded PE base-relocation parsing with loader-fixup evidence in Hex view
 - [x] Provider diagnostics that preserve REA evidence and add only evidence-backed setup hints
 - [x] Transactional target refresh + bounded project/PE input + Electron navigation/IPC hardening
 
@@ -23,7 +24,7 @@ Roadmap items are outcomes, not promises of dates.
 - [x] General navigation by address/function/foundation string
 - [x] Typed incoming/outgoing cross references from the function dossier
 - [x] Arbitrary-address instruction inspection with decoded/non-boundary/data status
-- [x] Hex evidence view comparing original file bytes with Ghidra loaded memory
+- [x] Hex evidence view comparing original file bytes with Ghidra loaded memory and annotating known relocation coverage
 - [x] Analyst-owned comments and aliases persisted in `.axiomre` projects
 - [x] Basic project save/load
 - [x] Reproducible real-analysis demo + first screenshot asset

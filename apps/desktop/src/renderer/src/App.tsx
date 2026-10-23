@@ -60,25 +60,66 @@ function ReferenceGroup({
   );
 }
 
-function addAddress(address: string, offset: number): string {
+function numericAddress(address: string): bigint | null {
   const marker = address.lastIndexOf(":0x");
-  const prefix = marker >= 0 ? `${address.slice(0, marker + 1)}` : "";
   const numeric = marker >= 0 ? address.slice(marker + 1) : address;
   try {
-    return `${prefix}0x${(BigInt(numeric) + BigInt(offset)).toString(16)}`;
+    return BigInt(numeric);
   } catch {
-    return offset === 0 ? address : `${address}+${offset.toString(16)}`;
+    return null;
   }
 }
 
-function HexComparison({ window }: { window: HexWindowResult }) {
+function addAddress(address: string, offset: number): string {
+  const marker = address.lastIndexOf(":0x");
+  const prefix = marker >= 0 ? `${address.slice(0, marker + 1)}` : "";
+  const numeric = numericAddress(address);
+  return numeric === null
+    ? (offset === 0 ? address : `${address}+${offset.toString(16)}`)
+    : `${prefix}0x${(numeric + BigInt(offset)).toString(16)}`;
+}
+
+function HexComparison({ window, report }: { window: HexWindowResult; report: BinaryReport }) {
   const rows = Array.from({ length: Math.ceil(window.file.bytes.length / 16) }, (_, row) => row * 16);
+  const relocationByOffset = new Map<number, BinaryReport["relocations"][number]>();
+  const startAddress = numericAddress(window.address);
+  if (startAddress !== null) {
+    const imageBase = BigInt(report.imageBase);
+    const endAddress = startAddress + BigInt(window.file.bytes.length);
+    for (const relocation of report.relocations) {
+      if (!relocation.widthBytes || relocation.widthBytes < 1) continue;
+      const relocationStart = imageBase + BigInt(relocation.rva);
+      const relocationEnd = relocationStart + BigInt(relocation.widthBytes);
+      if (relocationStart >= endAddress || relocationEnd <= startAddress) continue;
+      const coveredStart = relocationStart > startAddress ? relocationStart : startAddress;
+      const coveredEnd = relocationEnd < endAddress ? relocationEnd : endAddress;
+      for (let address = coveredStart; address < coveredEnd; address += 1n) {
+        relocationByOffset.set(Number(address - startAddress), relocation);
+      }
+    }
+  }
+  const relocationCount = new Set([...relocationByOffset.values()].map((entry) => `${entry.rva}:${entry.type}`)).size;
+
+  const byteClass = (changed: boolean, relocated: boolean): string | undefined => {
+    const classes = [changed ? "changed" : "", relocated ? "relocation" : ""].filter(Boolean);
+    return classes.length ? classes.join(" ") : undefined;
+  };
+  const relocationTitle = (offset: number): string | undefined => {
+    const relocation = relocationByOffset.get(offset);
+    return relocation
+      ? `${relocation.typeName} base relocation · RVA ${hex(relocation.rva)} · ${relocation.widthBytes ?? "unknown"} B`
+      : undefined;
+  };
+
   return (
     <div className="hex-view">
       <div className="hex-legend">
         <span>File @ {hex(window.file.fileOffset)}</span>
         <span>{window.memory ? `Ghidra memory · ${window.memory.complete ? "complete" : "partial"}` : `Memory unavailable${window.memoryError ? ` · ${window.memoryError}` : ""}`}</span>
       </div>
+      {relocationCount > 0 && (
+        <div className="hex-relocation-summary">PE base relocation coverage: {relocationCount} fixup{relocationCount === 1 ? "" : "s"} in this window. Outlined bytes may legitimately differ after loading.</div>
+      )}
       <div className="hex-header"><span>Address</span><span>Original file bytes</span><span>Loaded memory bytes</span><span>ASCII</span></div>
       {rows.map((offset) => {
         const fileBytes = window.file.bytes.slice(offset, offset + 16);
@@ -87,8 +128,18 @@ function HexComparison({ window }: { window: HexWindowResult }) {
         return (
           <div className="hex-row" key={offset}>
             <code>{addAddress(window.address, offset)}</code>
-            <code className="hex-cells">{fileBytes.map((byte, index) => <span className={memoryBytes[index] !== undefined && memoryBytes[index] !== byte ? "changed" : ""} key={index}>{byte.toString(16).padStart(2, "0")}</span>)}</code>
-            <code className="hex-cells">{fileBytes.map((_, index) => <span className={memoryBytes[index] !== undefined && memoryBytes[index] !== fileBytes[index] ? "changed" : ""} key={index}>{memoryBytes[index] === undefined ? "--" : memoryBytes[index].toString(16).padStart(2, "0")}</span>)}</code>
+            <code className="hex-cells">{fileBytes.map((byte, index) => {
+              const byteOffset = offset + index;
+              const changed = memoryBytes[index] !== undefined && memoryBytes[index] !== byte;
+              const relocated = relocationByOffset.has(byteOffset);
+              return <span className={byteClass(changed, relocated)} title={relocationTitle(byteOffset)} key={index}>{byte.toString(16).padStart(2, "0")}</span>;
+            })}</code>
+            <code className="hex-cells">{fileBytes.map((_, index) => {
+              const byteOffset = offset + index;
+              const changed = memoryBytes[index] !== undefined && memoryBytes[index] !== fileBytes[index];
+              const relocated = relocationByOffset.has(byteOffset);
+              return <span className={byteClass(changed, relocated)} title={relocationTitle(byteOffset)} key={index}>{memoryBytes[index] === undefined ? "--" : memoryBytes[index].toString(16).padStart(2, "0")}</span>;
+            })}</code>
             <code className="hex-ascii">{ascii}</code>
           </div>
         );
@@ -165,7 +216,7 @@ export default function App() {
   const [navQuery, setNavQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
-  const [peSymbolView, setPeSymbolView] = useState<"imports" | "exports">("imports");
+  const [peSymbolView, setPeSymbolView] = useState<"imports" | "exports" | "relocations">("imports");
   const [peSymbolFilter, setPeSymbolFilter] = useState("");
   const [procedures, setProcedures] = useState<ProcedureSummary[]>([]);
   const [procedureFilter, setProcedureFilter] = useState("");
@@ -228,6 +279,18 @@ export default function App() {
           entry.forwarder?.toLowerCase().includes(query),
         )
       : report.exports;
+  }, [report, peSymbolFilter]);
+
+  const visibleRelocations = useMemo(() => {
+    if (!report) return [];
+    const query = peSymbolFilter.trim().toLowerCase();
+    return query
+      ? report.relocations.filter((entry) =>
+          hex(entry.rva).toLowerCase().includes(query) ||
+          entry.typeName.toLowerCase().includes(query) ||
+          String(entry.type).includes(query),
+        )
+      : report.relocations;
   }, [report, peSymbolFilter]);
 
   const visibleProcedures = useMemo(() => {
@@ -535,21 +598,22 @@ export default function App() {
               <div className="panel imports-panel">
                 <div className="panel-heading symbol-heading">
                   <div>
-                    <span className="eyebrow">PE SYMBOLS</span>
+                    <span className="eyebrow">PE EVIDENCE</span>
                     <div className="symbol-tabs">
                       <button className={peSymbolView === "imports" ? "active" : ""} onClick={() => { setPeSymbolView("imports"); setPeSymbolFilter(""); }}>Imports <span>{report.imports.length}</span></button>
                       <button className={peSymbolView === "exports" ? "active" : ""} onClick={() => { setPeSymbolView("exports"); setPeSymbolFilter(""); }}>Exports <span>{report.exports.length}</span></button>
+                      <button className={peSymbolView === "relocations" ? "active" : ""} onClick={() => { setPeSymbolView("relocations"); setPeSymbolFilter(""); }}>Relocs <span>{report.relocations.length}</span></button>
                     </div>
                   </div>
                   <input
                     value={peSymbolFilter}
                     onChange={(event) => setPeSymbolFilter(event.target.value)}
-                    placeholder={peSymbolView === "imports" ? "Filter DLL / API…" : "Filter export / forwarder…"}
-                    disabled={peSymbolView === "imports" ? report.imports.length === 0 : report.exports.length === 0}
+                    placeholder={peSymbolView === "imports" ? "Filter DLL / API…" : peSymbolView === "exports" ? "Filter export / forwarder…" : "Filter RVA / relocation type…"}
+                    disabled={peSymbolView === "imports" ? report.imports.length === 0 : peSymbolView === "exports" ? report.exports.length === 0 : report.relocations.length === 0}
                   />
                 </div>
                 <div className="imports-list">
-                  {peSymbolView === "imports" ? (
+                  {peSymbolView === "imports" && (
                     <>
                       {visibleImports.map((entry, index) => (
                         <div className="import-row" key={`${entry.library}-${entry.name ?? entry.ordinal}-${entry.iatRva}-${index}`}>
@@ -561,7 +625,8 @@ export default function App() {
                       ))}
                       {visibleImports.length === 0 && <p className="muted">{report.imports.length === 0 ? "No PE imports declared." : "No matching imports."}</p>}
                     </>
-                  ) : (
+                  )}
+                  {peSymbolView === "exports" && (
                     <>
                       {visibleExports.map((entry, index) => (
                         <div className="export-row" key={`${entry.ordinal}-${entry.rva}-${index}`}>
@@ -572,6 +637,19 @@ export default function App() {
                         </div>
                       ))}
                       {visibleExports.length === 0 && <p className="muted">{report.exports.length === 0 ? "No PE exports declared." : "No matching exports."}</p>}
+                    </>
+                  )}
+                  {peSymbolView === "relocations" && (
+                    <>
+                      {visibleRelocations.map((entry, index) => (
+                        <div className="export-row" key={`${entry.rva}-${entry.type}-${index}`}>
+                          <code>RVA {hex(entry.rva)}</code>
+                          <span>{entry.typeName}</span>
+                          <code>type {entry.type}</code>
+                          <span>{entry.widthBytes === null ? "width unknown" : `${entry.widthBytes} B fixup`}</span>
+                        </div>
+                      ))}
+                      {visibleRelocations.length === 0 && <p className="muted">{report.relocations.length === 0 ? "No PE base relocations declared." : "No matching relocations."}</p>}
                     </>
                   )}
                 </div>
@@ -715,7 +793,7 @@ export default function App() {
                           </div>
                         ) : <p className="muted">Function references require a local procedure dossier.</p>
                       ) : codeView === "hex" ? (
-                        hexWindow ? <HexComparison window={hexWindow} /> : <p className="muted">No file-backed hex window is available for this address.</p>
+                        hexWindow ? <HexComparison window={hexWindow} report={report} /> : <p className="muted">No file-backed hex window is available for this address.</p>
                       ) : dossier ? (
                         <pre>{codeView === "pseudocode" ? (dossier.pseudocode || "// Pseudocode unavailable") : (dossier.assembly.join("\n") || "; Assembly unavailable")}</pre>
                       ) : (

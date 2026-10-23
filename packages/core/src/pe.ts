@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
-import type { BinaryReport, ExportInfo, ExtractedString, ImportInfo, SectionInfo } from "./model.js";
+import type { BinaryReport, ExportInfo, ExtractedString, ImportInfo, RelocationInfo, SectionInfo } from "./model.js";
 
 const PE_SIGNATURE = 0x00004550;
 const MAX_STRINGS = 500;
@@ -8,6 +8,8 @@ const MIN_STRING_LENGTH = 5;
 const MAX_IMPORT_LIBRARIES = 256;
 const MAX_IMPORT_SYMBOLS = 4096;
 const MAX_EXPORT_SYMBOLS = 4096;
+const MAX_RELOCATION_BLOCKS = 16_384;
+const MAX_RELOCATION_ENTRIES = 262_144;
 const MAX_PE_STRING_BYTES = 512;
 
 function ensureRange(buffer: Buffer, offset: number, size: number, label: string): void {
@@ -340,6 +342,139 @@ function parseExports(
   return { exports, limitations };
 }
 
+function relocationType(type: number): { typeName: string; widthBytes: number | null } {
+  switch (type) {
+    case 0:
+      return { typeName: "ABSOLUTE", widthBytes: 0 };
+    case 1:
+      return { typeName: "HIGH", widthBytes: 2 };
+    case 2:
+      return { typeName: "LOW", widthBytes: 2 };
+    case 3:
+      return { typeName: "HIGHLOW", widthBytes: 4 };
+    case 4:
+      return { typeName: "HIGHADJ", widthBytes: 2 };
+    case 10:
+      return { typeName: "DIR64", widthBytes: 8 };
+    default:
+      return { typeName: `TYPE_${type}`, widthBytes: null };
+  }
+}
+
+function parseRelocations(
+  buffer: Buffer,
+  format: "PE32" | "PE32+",
+  optional: number,
+  optionalSize: number,
+  sections: readonly SectionInfo[],
+  sizeOfHeaders: number,
+): { relocations: RelocationInfo[]; limitations: string[] } {
+  const relocations: RelocationInfo[] = [];
+  const limitations: string[] = [];
+  const numberOfDirectoriesOffset = format === "PE32+" ? 108 : 92;
+  const dataDirectoryOffset = format === "PE32+" ? 112 : 96;
+  const relocationDirectoryIndex = 5;
+
+  if (optionalSize < numberOfDirectoriesOffset + 4) {
+    return { relocations, limitations: ["PE optional header does not expose data-directory metadata for relocations."] };
+  }
+  const directoryCount = buffer.readUInt32LE(optional + numberOfDirectoriesOffset);
+  if (directoryCount <= relocationDirectoryIndex) return { relocations, limitations };
+
+  const directoryRelativeOffset = dataDirectoryOffset + relocationDirectoryIndex * 8;
+  if (optionalSize < directoryRelativeOffset + 8) {
+    return { relocations, limitations: ["PE optional header truncates the base-relocation data-directory entry."] };
+  }
+
+  const relocationRva = buffer.readUInt32LE(optional + directoryRelativeOffset);
+  const relocationSize = buffer.readUInt32LE(optional + directoryRelativeOffset + 4);
+  if (relocationRva === 0 || relocationSize === 0) return { relocations, limitations };
+
+  let consumed = 0;
+  let blockCount = 0;
+  let capped = false;
+
+  while (consumed < relocationSize && blockCount < MAX_RELOCATION_BLOCKS) {
+    const blockDirectoryRva = relocationRva + consumed;
+    if (!Number.isSafeInteger(blockDirectoryRva) || blockDirectoryRva > 0xffff_ffff) {
+      limitations.push("Base-relocation directory address exceeds the PE32 RVA range.");
+      break;
+    }
+
+    const blockOffset = rvaToFileOffset(sections, blockDirectoryRva, buffer.length, sizeOfHeaders);
+    if (blockOffset === null || blockOffset + 8 > buffer.length) {
+      limitations.push(`Base-relocation block at RVA 0x${blockDirectoryRva.toString(16)} is not fully file-backed.`);
+      break;
+    }
+
+    const pageRva = buffer.readUInt32LE(blockOffset);
+    const blockSize = buffer.readUInt32LE(blockOffset + 4);
+    if (blockSize === 0) break;
+    if (blockSize < 8) {
+      limitations.push(`Base-relocation block at RVA 0x${blockDirectoryRva.toString(16)} has invalid size ${blockSize}.`);
+      break;
+    }
+    if (blockSize > relocationSize - consumed) {
+      limitations.push(`Base-relocation block at RVA 0x${blockDirectoryRva.toString(16)} exceeds the declared directory size.`);
+      break;
+    }
+
+    const payloadBytes = blockSize - 8;
+    if (payloadBytes % 2 !== 0) {
+      limitations.push(`Base-relocation block for page RVA 0x${pageRva.toString(16)} has an odd entry payload size.`);
+    }
+    const entryCount = Math.floor(payloadBytes / 2);
+
+    for (let entryIndex = 0; entryIndex < entryCount; entryIndex += 1) {
+      if (relocations.length >= MAX_RELOCATION_ENTRIES) {
+        capped = true;
+        break;
+      }
+
+      const entryDirectoryRva = blockDirectoryRva + 8 + entryIndex * 2;
+      const entryOffset = rvaToFileOffset(sections, entryDirectoryRva, buffer.length, sizeOfHeaders);
+      if (entryOffset === null || entryOffset + 2 > buffer.length) {
+        limitations.push(`Base-relocation entry ${entryIndex} for page RVA 0x${pageRva.toString(16)} is not file-backed.`);
+        break;
+      }
+
+      const raw = buffer.readUInt16LE(entryOffset);
+      const type = raw >>> 12;
+      const pageOffset = raw & 0x0fff;
+      if (type === 0) continue;
+
+      const rva = pageRva + pageOffset;
+      if (rva > 0xffff_ffff) {
+        limitations.push(`Base-relocation entry at page RVA 0x${pageRva.toString(16)} overflows the PE32 RVA range.`);
+        continue;
+      }
+      const metadata = relocationType(type);
+      relocations.push({ rva, type, ...metadata });
+
+      // HIGHADJ consumes the following 16-bit slot as an addend rather than as a
+      // second relocation entry. Preserve the relocation but do not misclassify
+      // that paired value as another fixup.
+      if (type === 4) {
+        if (entryIndex + 1 < entryCount) entryIndex += 1;
+        else limitations.push(`HIGHADJ relocation at RVA 0x${rva.toString(16)} is missing its paired addend.`);
+      }
+    }
+
+    if (capped) break;
+    consumed += blockSize;
+    blockCount += 1;
+  }
+
+  if (blockCount >= MAX_RELOCATION_BLOCKS && consumed < relocationSize) {
+    limitations.push(`Base-relocation scan is intentionally capped at ${MAX_RELOCATION_BLOCKS} blocks.`);
+  }
+  if (capped) {
+    limitations.push(`Base-relocation output is intentionally capped at ${MAX_RELOCATION_ENTRIES} entries.`);
+  }
+
+  return { relocations, limitations };
+}
+
 export function extractAsciiStrings(
   buffer: Buffer,
   minLength = MIN_STRING_LENGTH,
@@ -421,11 +556,13 @@ export function parsePortableExecutable(path: string, buffer: Buffer): BinaryRep
 
   const importResult = parseImports(buffer, format, optional, optionalSize, sections, sizeOfHeaders);
   const exportResult = parseExports(buffer, format, optional, optionalSize, sections, sizeOfHeaders);
+  const relocationResult = parseRelocations(buffer, format, optional, optionalSize, sections, sizeOfHeaders);
   const strings = extractAsciiStrings(buffer);
   const limitations: string[] = [
     ...importResult.limitations,
     ...exportResult.limitations,
-    "This foundation parser does not yet resolve relocations, debug symbols, functions or cross-references.",
+    ...relocationResult.limitations,
+    "This foundation parser does not yet resolve debug symbols, functions or cross-references.",
   ];
   if (strings.length >= MAX_STRINGS) {
     limitations.push(`Printable string output is intentionally capped at ${MAX_STRINGS} entries.`);
@@ -445,6 +582,7 @@ export function parsePortableExecutable(path: string, buffer: Buffer): BinaryRep
     sections,
     imports: importResult.imports,
     exports: exportResult.exports,
+    relocations: relocationResult.relocations,
     strings,
     limitations,
   };

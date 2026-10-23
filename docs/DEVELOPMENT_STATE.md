@@ -7,13 +7,13 @@ This document summarizes the portable project state for contributors. Machine-sp
 AxiomRE currently supports one deliberately narrow native-analysis path:
 
 1. open a Windows PE32/PE32+ executable or library;
-2. inspect bounded PE metadata, sections, named/ordinal imports, named/ordinal-only/forwarded exports, strings and SHA-256 with the owned core parser;
+2. inspect bounded PE metadata, sections, named/ordinal imports, named/ordinal-only/forwarded exports, base relocations, strings and SHA-256 with the owned core parser;
 3. start a persistent REA/Ghidra MCP session for deep analysis;
 4. enumerate analyzed procedures;
 5. inspect a provider-neutral function dossier with pseudocode, assembly, callers/callees and typed references;
 6. navigate by canonical address, function name, imported API/DLL or foundation string;
 7. inspect the exact address as decoded instruction, data, non-boundary, undecodable or outside-memory evidence;
-8. compare bounded original file bytes with provider-loaded memory bytes;
+8. compare bounded original file bytes with provider-loaded memory bytes, marking coverage from known PE base relocations so loader fixups are visible evidence rather than unexplained byte changes;
 9. attach analyst-owned aliases/comments;
 10. save and reopen `.axiomre` project state after verifying the target SHA-256.
 
@@ -25,9 +25,9 @@ Foundation PE reads are capped at 512 MiB before allocation, and selected `.axio
 
 ## Regression baseline
 
-`npm run check` regenerates the project-owned deterministic PE fixture and currently runs 34 tests:
+`npm run check` regenerates the project-owned deterministic PE fixture and currently runs 36 tests:
 
-- 18 core tests;
+- 20 core tests;
 - 16 provider-adapter tests.
 
 The deterministic fixture is `fixtures/pe/minimal-x64.exe`. It is produced entirely by `scripts/generate-fixtures.mjs` and contains one minimal x64 entry function.
@@ -41,7 +41,7 @@ A real Ghidra/REA smoke against that fixture has verified:
 - interior-address-to-procedure resolution;
 - bounded provider byte reads.
 
-The owned PE import parser has also been exercised against `choice.exe`, recovering 86 imports across seven DLLs without import-table limitations. The export parser has been exercised against `kernel32.dll`, recovering 1,671 exports including 206 forwarders without export-table limitations.
+The owned PE import parser has also been exercised against `choice.exe`, recovering 86 imports across seven DLLs without import-table limitations. The export parser has been exercised against `kernel32.dll`, recovering 1,671 exports including 206 forwarders without export-table limitations. The base-relocation parser has been exercised against `notepad.exe` (361 `DIR64` relocations) and `kernel32.dll` (432 `DIR64` relocations) without relocation-table limitations.
 
 Deep smoke testing is optional because it requires a compatible JDK and Ghidra installation. Core CI does not silently install those external tools.
 

@@ -29,6 +29,13 @@ export interface ExportInfo {
   forwarder: string | null;
 }
 
+export interface RelocationInfo {
+  rva: number;
+  type: number;
+  typeName: string;
+  widthBytes: number | null;
+}
+
 export interface ProcedureSummary {
   address: string;
   name: string;
@@ -123,6 +130,7 @@ export interface BinaryReport {
   sections: SectionInfo[];
   imports: ImportInfo[];
   exports: ExportInfo[];
+  relocations: RelocationInfo[];
   strings: ExtractedString[];
   limitations: string[];
 }
