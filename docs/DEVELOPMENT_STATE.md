@@ -65,7 +65,7 @@ Performance numbers are observations, not contractual benchmarks; they vary by h
 
 ## Current launch blockers
 
-Before a public v0.1 community launch, the project still needs:
+Before the public `v0.1.0-alpha.1` community launch, the project still needs:
 
 - a hosted CI run on supported platforms once a remote is available;
 - one external-contributor onboarding validation once the repository can be shared privately or publicly;

@@ -26,7 +26,8 @@ This checklist is intentionally conservative. HexScry should be public when the 
 - [x] Windows unpacked package deep-smokes against the project-owned PE fixture.
 - [x] Windows portable self-extracting artifact deep-smokes against the same fixture.
 - [x] Release audit confirms bundled/external dependency policy.
-- [ ] Rebuild `HexScry 0.0.1.exe` from the final tagged source.
+- [ ] Bump all npm workspaces to `0.1.0-alpha.1` only after the launch gate is green.
+- [ ] Build `HexScry 0.1.0-alpha.1.exe` from the final tagged source following `docs/RELEASE_PROCESS.md`.
 - [ ] Record final artifact size and SHA-256 in release notes.
 - [ ] Inspect packaged license resources and confirm optional Frida is absent.
 - [ ] Inspect the final screenshot/demo generated from the tagged source.
@@ -38,6 +39,7 @@ This checklist is intentionally conservative. HexScry should be public when the 
 - [x] Machine-specific `WORK_HANDOFF.md`, evidence and release artifacts are ignored.
 - [ ] GitHub remote configured.
 - [ ] Branch protection / required CI checks configured where available.
+- [ ] GitHub private vulnerability reporting / Security Advisories enabled so `SECURITY.md` has a real private channel.
 - [ ] Initial community issues created from `docs/CONTRIBUTOR_BACKLOG.md`.
 - [ ] GitHub Discussions enabled if useful after the first contributor arrives; do not enable empty community surfaces just for appearance.
 

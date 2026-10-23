@@ -39,3 +39,8 @@ The Electron main process remains ESM, but the sandboxed preload is built explic
 **Status:** accepted.
 
 When HexScry launches REA from the Electron main process, `process.execPath` points at `electron.exe`. Provider child processes therefore set `ELECTRON_RUN_AS_NODE=1` so the same `rea.mjs` entrypoint behaves consistently under Electron and ordinary Node. The first procedure inventory may trigger Ghidra auto-analysis and gets a bounded five-minute MCP timeout; later interactive operations remain bounded to one minute and support cancellation.
+
+## D009 — Public alpha versioning
+**Status:** accepted.
+
+Internal pre-launch artifacts remain `0.0.1`. The first public community release will use SemVer prerelease `0.1.0-alpha.1` / Git tag `v0.1.0-alpha.1` once the launch gate passes. Subsequent breaking alpha adjustments may increment `alpha.N`; a stable `v0.1.0` is reserved for a later point when the public alpha contracts have received real contributor/user feedback. Do not bump trunk solely to make it look closer to release.

@@ -8,7 +8,7 @@ Open-source reverse-engineering workbench for evidence-first PE analysis, persis
 
 ## Short announcement
 
-**HexScry v0.1 alpha is open for contributors.**
+**HexScry v0.1.0-alpha.1 is open for contributors.**
 
 HexScry is an open-source reverse-engineering workbench built around a simple rule: analysis claims should stay connected to evidence.
 
