@@ -18,6 +18,8 @@ Frida is an optional REA dependency and is not required by the v0.1 PE/Ghidra wo
 
 Do not replace this exclusion with `npm prune --omit=optional`: TypeScript 7 uses optional platform packages during development/build, and a broad prune was observed to produce an unsuitable runtime tree. Packaging must filter Frida specifically.
 
+A clean `npm ci` may also warn that the dev-only `electron-winstaller` install script is not approved. Do not blanket-approve it merely to silence npm: AxiomRE's verified portable/NSIS path passes `release:verify` with that script blocked. Revisit approval only if a future release target demonstrably requires it.
+
 ## Packaging layout
 
 AxiomRE v0.1 deliberately keeps Electron ASAR disabled. REA is invoked as a child-process/runtime with filesystem-backed scripts and bridge assets, so forcing it into ASAR now would require a brittle unpack policy for little user-visible benefit. The release audit treats this as an explicit v0.1 decision: changing ASAR policy requires a fresh packaged-runtime verification.
