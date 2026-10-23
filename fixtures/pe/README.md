@@ -14,7 +14,7 @@ Properties:
 
 Regenerate with:
 
-```powershell
+```text
 node scripts/generate-fixtures.mjs
 ```
 

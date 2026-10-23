@@ -46,7 +46,7 @@ Heavy analysis belongs out of the renderer process.
 
 ## Development
 
-```powershell
+```text
 npm ci
 npm run doctor
 npm run check
@@ -57,7 +57,7 @@ Node.js 24 is the supported development line (`.nvmrc` / `.node-version`). `npm 
 
 ### Reproducible demo
 
-```powershell
+```text
 npm run demo          # open the project-owned PE fixture with the owned parser
 npm run demo:deep     # fixture + live persistent REA/Ghidra analysis
 npm run demo:capture  # deep demo, capture the stable renderer, then exit

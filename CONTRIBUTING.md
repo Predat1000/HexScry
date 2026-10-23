@@ -12,7 +12,7 @@ Requirements:
 
 From a clean checkout:
 
-```powershell
+```text
 npm ci
 npm run doctor
 npm run check
@@ -25,9 +25,9 @@ REA currently declares Frida as an optional dependency. npm may report its nativ
 
 ## Optional deep-analysis setup
 
-Core parser tests do not require Ghidra. To exercise the real native-analysis smoke test, install a compatible JDK and Ghidra, set `JAVA_HOME` and `GHIDRA_INSTALL_DIR`, then run:
+Core parser tests do not require Ghidra. To exercise the real native-analysis smoke test, install a compatible JDK and Ghidra, set `JAVA_HOME` and `GHIDRA_INSTALL_DIR` using your platform's normal environment configuration, then run:
 
-```powershell
+```text
 npm run smoke:rea
 ```
 
