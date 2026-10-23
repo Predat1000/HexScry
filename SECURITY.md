@@ -1,15 +1,15 @@
 # Security policy
 
-AxiomRE processes executable files and other artifacts that may be malformed or hostile. The project therefore treats analyzed input as untrusted data.
+HexScry processes executable files and other artifacts that may be malformed or hostile. The project therefore treats analyzed input as untrusted data.
 
 ## Design rules
 
-- AxiomRE must not execute a target binary merely to analyze it.
+- HexScry must not execute a target binary merely to analyze it.
 - Renderer code has no direct Node.js or filesystem access.
 - Provider-specific work runs outside the renderer and crosses typed IPC boundaries.
 - Reads are bounded where practical; provider output is validated before entering the UI model.
 - The current Ghidra workflow uses ephemeral analysis state and does not write changes back to the original executable.
-- Project annotations are stored in `.axiomre` files rather than modifying the target.
+- Project annotations are stored in `.hexscry` files rather than modifying the target.
 
 A feature that weakens one of these boundaries requires explicit security review and a documented reason.
 

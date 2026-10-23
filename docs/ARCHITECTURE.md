@@ -2,7 +2,7 @@
 
 ## Direction
 
-AxiomRE is a workbench, not a single monolithic disassembler. The application owns the user experience, project model, evidence model, plugin contracts, orchestration, caching and comparison workflows. Specialized engines remain isolated behind adapters.
+HexScry is a workbench, not a single monolithic disassembler. The application owns the user experience, project model, evidence model, plugin contracts, orchestration, caching and comparison workflows. Specialized engines remain isolated behind adapters.
 
 ```text
 Desktop UI
@@ -10,7 +10,7 @@ Desktop UI
 Preload / typed IPC
    |
 Application services
-   +-- AxiomRE Core (owned parsers + model)
+   +-- HexScry Core (owned parsers + model)
    +-- Provider adapters
    |     +-- REA
    |     +-- Ghidra
@@ -36,7 +36,7 @@ Owns file dialogs, filesystem access, process spawning, provider adapters and ap
 Owns stable domain types and parsers that are genuinely useful for us to implement. The core must not depend on React/Electron. PE base relocations are core evidence: loader-fixup coverage is derived from the file itself and can annotate file-vs-memory differences independently of whichever deep-analysis provider is active. Debug Directory / CodeView identity is also core evidence: PDB path, RSDS/NB10 identity, GUID/age and other debug-directory entry types come directly from bounded PE bytes rather than from Ghidra-specific output. TLS Directory metadata and callback VAs are likewise core evidence because callbacks can execute before the ordinary PE entry point; the parser records them independently and deep providers may later corroborate whether each callback resolves to executable code.
 
 ### Providers
-Provider output is normalized into AxiomRE models. UI code must not learn Ghidra/REA-specific response structures.
+Provider output is normalized into HexScry models. UI code must not learn Ghidra/REA-specific response structures.
 
 Interactive REA/Ghidra access uses one persistent MCP subprocess/session. `open_binary` selects the target, and the first deep inventory request may trigger Ghidra auto-analysis; later navigation reuses that analyzed session. When spawned by Electron, REA runs through Electron's Node runtime mode (`ELECTRON_RUN_AS_NODE=1`) so provider behavior matches Node-based smoke tests. The deep inventory request has a bounded five-minute timeout and remains cancelable; interactive requests retain shorter bounds. One-shot REA CLI commands remain useful for diagnostics and automation but are deliberately excluded from the interactive hot path because each CLI invocation owns an isolated provider session.
 

@@ -1,9 +1,9 @@
 {
-  "name": "@axiomre/desktop",
+  "name": "@hexscry/desktop",
   "version": "0.0.1",
   "private": true,
   "description": "Evidence-first reverse engineering workbench.",
-  "author": "AxiomRE contributors",
+  "author": "HexScry contributors",
   "license": "MPL-2.0",
   "type": "module",
   "main": "./out/main/index.js",
@@ -13,8 +13,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@axiomre/core": "*",
-    "@axiomre/provider-rea": "*",
+    "@hexscry/core": "*",
+    "@hexscry/provider-rea": "*",
     "@electron-toolkit/utils": "^4.0.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"

@@ -17,15 +17,15 @@ import {
   type MemoryByteWindow,
   type ProcedureResolution,
   type ProcedureSummary,
-} from "@axiomre/core";
-import { defaultReaEntrypoint, ReaMcpSession, resolveReaEnvironment } from "@axiomre/provider-rea";
+} from "@hexscry/core";
+import { defaultReaEntrypoint, ReaMcpSession, resolveReaEnvironment } from "@hexscry/provider-rea";
 
 let currentBinaryPath: string | null = null;
 let currentBinaryReport: BinaryReport | null = null;
 let reaSession: ReaMcpSession | null = null;
 let deepAnalysisController: AbortController | null = null;
 let bootstrapError: string | null = null;
-const demoAutoDeep = process.env.AXIOMRE_DEMO_DEEP === "1";
+const demoAutoDeep = process.env.HEXSCRY_DEMO_DEEP === "1";
 
 interface ToolStatus {
   rea: { available: boolean; version?: string };
@@ -65,9 +65,9 @@ function requireByteReadLength(value: unknown): number {
 
 async function readProjectText(path: string): Promise<string> {
   const info = await stat(path);
-  if (!info.isFile()) throw new Error("AxiomRE project is not a regular file.");
+  if (!info.isFile()) throw new Error("HexScry project is not a regular file.");
   if (info.size > MAX_PROJECT_FILE_BYTES) {
-    throw new Error("AxiomRE project exceeds the 4 MiB safety limit.");
+    throw new Error("HexScry project exceeds the 4 MiB safety limit.");
   }
   return readFile(path, "utf8");
 }
@@ -80,7 +80,7 @@ async function getReaSession(): Promise<ReaMcpSession> {
 }
 
 async function loadDemoTargetFromEnvironment(): Promise<void> {
-  const configured = process.env.AXIOMRE_DEMO_TARGET?.trim();
+  const configured = process.env.HEXSCRY_DEMO_TARGET?.trim();
   if (!configured) return;
 
   const target = resolve(configured);
@@ -134,7 +134,7 @@ async function probeToolchain(): Promise<ToolStatus> {
 }
 
 async function captureDemoWhenReady(mainWindow: BrowserWindow): Promise<void> {
-  const configuredPath = process.env.AXIOMRE_DEMO_CAPTURE?.trim();
+  const configuredPath = process.env.HEXSCRY_DEMO_CAPTURE?.trim();
   if (!configuredPath) return;
 
   const capturePath = resolve(configuredPath);
@@ -151,13 +151,13 @@ async function captureDemoWhenReady(mainWindow: BrowserWindow): Promise<void> {
     }
     if (state.hasEntry && !state.analyzing) {
       // Documentation captures should be stable across development machines and remote
-      // desktop resolutions. This resize is only active when AXIOMRE_DEMO_CAPTURE is set.
+      // desktop resolutions. This resize is only active when HEXSCRY_DEMO_CAPTURE is set.
       mainWindow.setContentSize(1424, 836, false);
       await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
       const image = await mainWindow.webContents.capturePage();
       await writeFile(capturePath, image.toPNG());
       console.log(`[demo-capture] ${capturePath}`);
-      if (process.env.AXIOMRE_DEMO_EXIT_AFTER_CAPTURE === "1") app.quit();
+      if (process.env.HEXSCRY_DEMO_EXIT_AFTER_CAPTURE === "1") app.quit();
       return;
     }
   }
@@ -165,7 +165,7 @@ async function captureDemoWhenReady(mainWindow: BrowserWindow): Promise<void> {
   if (!mainWindow.isDestroyed()) {
     console.error("[demo-capture] Timed out waiting for a stable deep-analysis demo state.");
   }
-  if (process.env.AXIOMRE_DEMO_EXIT_AFTER_CAPTURE === "1") app.quit();
+  if (process.env.HEXSCRY_DEMO_EXIT_AFTER_CAPTURE === "1") app.quit();
 }
 
 function createWindow(): void {
@@ -219,7 +219,7 @@ function createWindow(): void {
 
 app.whenReady().then(async () => {
   await loadDemoTargetFromEnvironment();
-  electronApp.setAppUserModelId("org.axiomre.workbench");
+  electronApp.setAppUserModelId("org.hexscry.workbench");
 
   app.on("browser-window-created", (_, window) => {
     optimizer.watchWindowShortcuts(window);
@@ -264,9 +264,9 @@ app.whenReady().then(async () => {
     if (!currentBinaryReport) throw new Error("Open a binary before saving a project.");
     const project = createProject(currentBinaryReport, selectedProcedure, annotations);
     const selected = await dialog.showSaveDialog({
-      title: "Save AxiomRE project",
-      defaultPath: `${currentBinaryReport.fileName}.axiomre`,
-      filters: [{ name: "AxiomRE project", extensions: ["axiomre"] }],
+      title: "Save HexScry project",
+      defaultPath: `${currentBinaryReport.fileName}.hexscry`,
+      filters: [{ name: "HexScry project", extensions: ["hexscry"] }],
     });
     if (selected.canceled || !selected.filePath) return null;
     await writeFile(selected.filePath, `${JSON.stringify(project, null, 2)}\n`, "utf8");
@@ -275,9 +275,9 @@ app.whenReady().then(async () => {
 
   ipcMain.handle("project:open", async (): Promise<{ report: BinaryReport; selectedProcedure: string | null; annotations: AnalystAnnotations } | null> => {
     const selected = await dialog.showOpenDialog({
-      title: "Open AxiomRE project",
+      title: "Open HexScry project",
       properties: ["openFile"],
-      filters: [{ name: "AxiomRE project", extensions: ["axiomre"] }],
+      filters: [{ name: "HexScry project", extensions: ["hexscry"] }],
     });
     if (selected.canceled || !selected.filePaths[0]) return null;
 

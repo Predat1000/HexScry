@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import type { AnalystAnnotations, BinaryReport, FunctionDossier, InstructionInspection, ProcedureSummary, ReferenceEdge } from "@axiomre/core";
+import type { AnalystAnnotations, BinaryReport, FunctionDossier, InstructionInspection, ProcedureSummary, ReferenceEdge } from "@hexscry/core";
 import type { HexWindowResult, ToolStatus } from "../../preload/index";
 
 function hex(value: number): string {
@@ -231,7 +231,7 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    void Promise.all([window.axiom.toolchain(), window.axiom.bootstrap()])
+    void Promise.all([window.hexscry.toolchain(), window.hexscry.bootstrap()])
       .then(([nextToolchain, bootstrap]) => {
         if (!active) return;
         setToolchain(nextToolchain);
@@ -354,7 +354,7 @@ export default function App() {
     setBusy(true);
     setError(null);
     try {
-      const next = await window.axiom.openBinary();
+      const next = await window.hexscry.openBinary();
       if (next) applyReport(next);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
@@ -367,7 +367,7 @@ export default function App() {
     setBusy(true);
     setError(null);
     try {
-      const project = await window.axiom.openProject();
+      const project = await window.hexscry.openProject();
       if (project) applyReport(project.report, project.selectedProcedure, project.annotations);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
@@ -379,15 +379,15 @@ export default function App() {
   async function saveProject() {
     setError(null);
     try {
-      await window.axiom.saveProject(selectedProcedure, annotations);
+      await window.hexscry.saveProject(selectedProcedure, annotations);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : String(reason));
     }
   }
 
   async function navigateAddress(address: string) {
-    const exactInstruction = await window.axiom.inspectInstruction(address);
-    const resolution = await window.axiom.resolveAddress(address);
+    const exactInstruction = await window.hexscry.inspectInstruction(address);
+    const resolution = await window.hexscry.resolveAddress(address);
 
     if (resolution.procedure && !resolution.procedure.external) {
       await selectProcedure(resolution.procedure);
@@ -400,7 +400,7 @@ export default function App() {
 
     setInstruction(exactInstruction);
     try {
-      setHexWindow(await window.axiom.hexWindow(exactInstruction.address, 256));
+      setHexWindow(await window.hexscry.hexWindow(exactInstruction.address, 256));
     } catch {
       setHexWindow(null);
     }
@@ -473,7 +473,7 @@ export default function App() {
     setDeepBusy(true);
     setDeepError(null);
     try {
-      const nextProcedures = await window.axiom.deepProcedures();
+      const nextProcedures = await window.hexscry.deepProcedures();
       setProcedures(nextProcedures);
       const restored = selectedProcedure
         ? nextProcedures.find((procedure) => procedure.address === selectedProcedure && !procedure.external)
@@ -490,7 +490,7 @@ export default function App() {
   }
 
   async function cancelDeepAnalysis() {
-    await window.axiom.cancelDeepAnalysis();
+    await window.hexscry.cancelDeepAnalysis();
     setDeepBusy(false);
     setFunctionBusy(false);
   }
@@ -515,10 +515,10 @@ export default function App() {
     setInstruction(null);
     setHexWindow(null);
     try {
-      const nextDossier = await window.axiom.analyzeFunction(procedure.address);
+      const nextDossier = await window.hexscry.analyzeFunction(procedure.address);
       setDossier(nextDossier);
       try {
-        setHexWindow(await window.axiom.hexWindow(procedure.address, 256));
+        setHexWindow(await window.hexscry.hexWindow(procedure.address, 256));
       } catch {
         setHexWindow(null);
       }
@@ -537,7 +537,7 @@ export default function App() {
         <div className="brand">
           <span className="mark">AX</span>
           <div>
-            <h1>AxiomRE</h1>
+            <h1>HexScry</h1>
             <p>evidence-first reverse engineering workbench</p>
           </div>
         </div>
@@ -576,7 +576,7 @@ export default function App() {
             <span className="eyebrow">PRE-ALPHA · VERTICAL SLICE 01</span>
             <h2>Start with evidence, not guesses.</h2>
             <p>
-              Open a Windows executable or DLL. AxiomRE will inspect its PE structure using
+              Open a Windows executable or DLL. HexScry will inspect its PE structure using
               its own bounded parser before any deep-analysis provider is involved.
             </p>
             <button className="primary large" onClick={openBinary} disabled={busy}>
@@ -833,7 +833,7 @@ export default function App() {
                                 maxLength={4000}
                                 value={annotations.comments[dossier.procedure.address] ?? ""}
                                 onChange={(event) => updateAnnotation("comments", dossier.procedure.address, event.target.value)}
-                                placeholder="Analyst-owned note; saved only in the .axiomre project"
+                                placeholder="Analyst-owned note; saved only in the .hexscry project"
                               />
                             </label>
                           </div>

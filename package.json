@@ -1,5 +1,5 @@
 {
-  "name": "axiomre",
+  "name": "hexscry",
   "version": "0.0.1",
   "private": true,
   "description": "Open-source reverse engineering workbench for evidence-first human and AI-assisted analysis.",
@@ -22,14 +22,14 @@
     "demo": "node scripts/run-demo.mjs",
     "demo:deep": "node scripts/run-demo.mjs --deep",
     "demo:capture": "node scripts/run-demo.mjs --deep --capture",
-    "dev": "npm run install:electron && npm run build:core && npm run build:sdk && npm run build:provider && npm run dev -w @axiomre/desktop",
-    "build:core": "npm run build -w @axiomre/core",
-    "build:sdk": "npm run build -w @axiomre/plugin-sdk",
-    "build:provider": "npm run build -w @axiomre/provider-rea",
-    "build:desktop": "npm run build -w @axiomre/desktop",
+    "dev": "npm run install:electron && npm run build:core && npm run build:sdk && npm run build:provider && npm run dev -w @hexscry/desktop",
+    "build:core": "npm run build -w @hexscry/core",
+    "build:sdk": "npm run build -w @hexscry/plugin-sdk",
+    "build:provider": "npm run build -w @hexscry/provider-rea",
+    "build:desktop": "npm run build -w @hexscry/desktop",
     "build": "npm run build:core && npm run build:sdk && npm run build:provider && npm run build:desktop",
-    "typecheck": "npm run build:core && npm run build:provider && npm run typecheck -w @axiomre/core && npm run typecheck -w @axiomre/plugin-sdk && npm run typecheck -w @axiomre/provider-rea && npm run typecheck -w @axiomre/desktop",
-    "test": "npm run test -w @axiomre/core && npm run test -w @axiomre/provider-rea",
+    "typecheck": "npm run build:core && npm run build:provider && npm run typecheck -w @hexscry/core && npm run typecheck -w @hexscry/plugin-sdk && npm run typecheck -w @hexscry/provider-rea && npm run typecheck -w @hexscry/desktop",
+    "test": "npm run test -w @hexscry/core && npm run test -w @hexscry/provider-rea",
     "check": "npm run fixtures:generate && npm run licenses:check && npm run typecheck && npm run test && npm run build"
   },
   "engines": {

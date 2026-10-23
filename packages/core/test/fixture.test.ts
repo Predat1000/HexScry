@@ -14,9 +14,9 @@ test("parses the deterministic x64 PE corpus fixture", async () => {
   assert.equal(report.imageBase, "0x140000000");
   assert.equal(report.entryPointRva, 0x1000);
   assert.equal(report.fileSize, 0x400);
-  assert.equal(report.sha256, "f1f33fb9f4108548f10aa5ad8c94d4cf21b69e43b5104609a7b8fa30f0ebbbcd");
+  assert.equal(report.sha256, "134f2ecaa3e88b87d42e8ee146b9ad40ac0e985c576b028ceea2df7d5dbc139e");
   assert.deepEqual(report.sections.map((section) => section.name), [".text"]);
-  assert.ok(report.strings.some((entry) => entry.value === "AxiomRE deterministic PE fixture"));
+  assert.ok(report.strings.some((entry) => entry.value === "HexScry deterministic PE fixture"));
 
   const entry = await readBinaryWindowAtAddress(report, "0x140001000", 3);
   assert.equal(entry.fileOffset, 0x200);

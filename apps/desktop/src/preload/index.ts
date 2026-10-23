@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { AnalystAnnotations, BinaryReport, BinaryWindow, FunctionDossier, InstructionInspection, MemoryByteWindow, ProcedureResolution, ProcedureSummary } from "@axiomre/core";
+import type { AnalystAnnotations, BinaryReport, BinaryWindow, FunctionDossier, InstructionInspection, MemoryByteWindow, ProcedureResolution, ProcedureSummary } from "@hexscry/core";
 
 export interface ToolStatus {
   rea: { available: boolean; version?: string };
@@ -20,7 +20,7 @@ export interface BootstrapState {
   error: string | null;
 }
 
-export interface AxiomApi {
+export interface HexScryApi {
   bootstrap(): Promise<BootstrapState>;
   openBinary(): Promise<BinaryReport | null>;
   openProject(): Promise<{ report: BinaryReport; selectedProcedure: string | null; annotations: AnalystAnnotations } | null>;
@@ -34,7 +34,7 @@ export interface AxiomApi {
   toolchain(): Promise<ToolStatus>;
 }
 
-const api: AxiomApi = {
+const api: HexScryApi = {
   bootstrap: () => ipcRenderer.invoke("analysis:bootstrap"),
   openBinary: () => ipcRenderer.invoke("analysis:open-binary"),
   openProject: () => ipcRenderer.invoke("project:open"),
@@ -48,4 +48,4 @@ const api: AxiomApi = {
   toolchain: () => ipcRenderer.invoke("system:toolchain"),
 };
 
-contextBridge.exposeInMainWorld("axiom", api);
+contextBridge.exposeInMainWorld("hexscry", api);

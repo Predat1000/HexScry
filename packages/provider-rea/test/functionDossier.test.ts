@@ -61,7 +61,7 @@ const capturedShape = {
   },
 };
 
-test("normalizes the function dossier fields AxiomRE currently consumes", () => {
+test("normalizes the function dossier fields HexScry currently consumes", () => {
   assert.deepEqual(__mcpTest.parseFunctionDossier(capturedShape), {
     procedure: {
       address: "0x140001010",

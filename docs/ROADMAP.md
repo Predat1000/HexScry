@@ -28,7 +28,7 @@ Roadmap items are outcomes, not promises of dates.
 - [x] Typed incoming/outgoing cross references from the function dossier
 - [x] Arbitrary-address instruction inspection with decoded/non-boundary/data status
 - [x] Hex evidence view comparing original file bytes with Ghidra loaded memory and annotating known relocation coverage
-- [x] Analyst-owned comments and aliases persisted in `.axiomre` projects
+- [x] Analyst-owned comments and aliases persisted in `.hexscry` projects
 - [x] Basic project save/load
 - [x] Reproducible real-analysis demo + first screenshot asset
 - [x] Contributor-ready CI, issue/PR templates, security and contribution docs

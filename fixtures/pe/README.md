@@ -10,7 +10,7 @@ Properties:
 - one executable/readable `.text` section;
 - entry machine code: `xor eax, eax; ret`;
 - deterministic timestamp and padding;
-- embedded marker string: `AxiomRE deterministic PE fixture`.
+- embedded marker string: `HexScry deterministic PE fixture`.
 
 Regenerate with:
 

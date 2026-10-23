@@ -1,5 +1,5 @@
 import { access } from "node:fs/promises";
-import type { FunctionDossier, InstructionInspection, InstructionReference, MemoryByteWindow, ProcedureResolution, ProcedureSummary, ReferenceEdge } from "@axiomre/core";
+import type { FunctionDossier, InstructionInspection, InstructionReference, MemoryByteWindow, ProcedureResolution, ProcedureSummary, ReferenceEdge } from "@hexscry/core";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { defaultReaEntrypoint, reaNodeEnvironment } from "./reaCli.js";
@@ -454,7 +454,7 @@ export class ReaMcpSession {
       stderr: "pipe",
     });
     const client = new Client(
-      { name: "axiomre", version: "0.0.1" },
+      { name: "hexscry", version: "0.0.1" },
       { capabilities: {} },
     );
 
@@ -554,7 +554,7 @@ export class ReaMcpSession {
     if (!this.#client || !this.#targetPath) throw new Error("No binary is open in the REA session.");
     if (!address) throw new Error("A memory address is required.");
     if (!Number.isSafeInteger(length) || length < 1 || length > 4096) {
-      throw new Error("AxiomRE byte reads must request between 1 and 4096 bytes.");
+      throw new Error("HexScry byte reads must request between 1 and 4096 bytes.");
     }
     if (signal?.aborted) throw signal.reason ?? new Error("Analysis cancelled.");
 

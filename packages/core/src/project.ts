@@ -5,8 +5,8 @@ export interface AnalystAnnotations {
   comments: Record<string, string>;
 }
 
-export interface AxiomProjectV1 {
-  schema: "axiomre-project";
+export interface HexScryProjectV1 {
+  schema: "hexscry-project";
   version: 1;
   target: {
     path: string;
@@ -27,11 +27,11 @@ export function createProject(
   report: BinaryReport,
   selectedProcedure: string | null = null,
   annotations: AnalystAnnotations = { aliases: {}, comments: {} },
-): AxiomProjectV1 {
+): HexScryProjectV1 {
   const normalizedAnnotations = parseAnnotations(annotations);
   const normalizedProcedure = parseSelectedProcedure(selectedProcedure);
   return {
-    schema: "axiomre-project",
+    schema: "hexscry-project",
     version: 1,
     target: {
       path: report.path,
@@ -82,7 +82,7 @@ function parseAnnotations(value: unknown): AnalystAnnotations {
   };
 }
 
-export function parseProject(text: string): AxiomProjectV1 {
+export function parseProject(text: string): HexScryProjectV1 {
   let decoded: unknown;
   try {
     decoded = JSON.parse(text);
@@ -94,8 +94,8 @@ export function parseProject(text: string): AxiomProjectV1 {
     throw new Error("Project file root is invalid.");
   }
   const project = decoded as Record<string, unknown>;
-  if (project.schema !== "axiomre-project" || project.version !== 1) {
-    throw new Error("Unsupported AxiomRE project schema or version.");
+  if (project.schema !== "hexscry-project" || project.version !== 1) {
+    throw new Error("Unsupported HexScry project schema or version.");
   }
 
   const target = project.target;
@@ -121,7 +121,7 @@ export function parseProject(text: string): AxiomProjectV1 {
     : parseAnnotations(project.annotations);
 
   return {
-    schema: "axiomre-project",
+    schema: "hexscry-project",
     version: 1,
     target: {
       path: targetRecord.path,
@@ -132,7 +132,7 @@ export function parseProject(text: string): AxiomProjectV1 {
   };
 }
 
-export function verifyProjectTarget(project: AxiomProjectV1, report: BinaryReport): void {
+export function verifyProjectTarget(project: HexScryProjectV1, report: BinaryReport): void {
   if (report.sha256 !== project.target.sha256) {
     throw new Error(
       `Project target hash mismatch. Expected ${project.target.sha256}, observed ${report.sha256}.`,

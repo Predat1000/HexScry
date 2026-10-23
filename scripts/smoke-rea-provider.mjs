@@ -7,7 +7,7 @@ import { ReaMcpSession, resolveReaEnvironment } from "../packages/provider-rea/d
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const root = dirname(scriptDir);
-const outputDir = join(root, ".axiomre-dev");
+const outputDir = join(root, ".hexscry-dev");
 const outputPath = join(outputDir, "smoke-rea-provider-result.json");
 const target = resolve(process.argv[2] ?? "C:\\Windows\\System32\\choice.exe");
 const session = new ReaMcpSession({ environment: await resolveReaEnvironment(process.env) });

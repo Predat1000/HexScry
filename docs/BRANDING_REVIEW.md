@@ -1,20 +1,28 @@
-# Provisional branding review
+# Branding review
 
-`AxiomRE` remains a working codename. It is not yet approved as the final public product name.
+`AxiomRE` was the original internal working name. Before public launch, the project was renamed to **HexScry** to reduce known naming/collision risk while the change was still cheap.
 
-## Checks performed — 2026-10-23
+## Review performed — 2026-10-23
 
-- GitHub repository search for `AxiomRE` / `AxiomRE in:name` did not surface an exact reverse-engineering project using that repository name in the reviewed results. Similar names such as AxiomRelay, AxiomRed and AxiomResearch exist.
-- The npm registry returned 404 for the exact unscoped package name `axiomre` at the time of review.
-- General web search surfaced an existing/recently indexed insurance/reinsurance business identity using `AxiomRe` / `AxiomRe, Inc.`. This is a different industry, but it is enough that we should not treat the name as legally cleared merely because developer registries are free.
-- Alternative names were sanity-checked before considering a rename. `Fathom Re` is also used by an existing business, while `HexLoom` is already used by a hex/reverse-engineering tool. Renaming merely to exchange one collision risk for another would create churn without a clear benefit.
+### Why AxiomRE was retired
+
+- GitHub and npm did not show an exact reverse-engineering/software collision for `AxiomRE` at the time of review.
+- General web search did surface an existing/recent insurance/reinsurance identity using `AxiomRe` / `AxiomRe, Inc.`. It is a different industry, but retaining a known external identity immediately before public launch offered no meaningful benefit.
+- Earlier alternatives were rejected when they merely exchanged one collision for another: `Fathom Re` is used by an existing business and `HexLoom` is already used by a hex/reverse-engineering tool.
+
+### HexScry checks
+
+- GitHub repository search for exact `HexScry` / `HexScry in:name` returned no exact repository in the reviewed results.
+- The npm registry had no published exact unscoped `hexscry` package in the review.
+- Exact/general web searches did not surface a known reverse-engineering, security or software product named `HexScry`.
+- Search-engine checks scoped toward major trademark registries did not surface an obvious `HexScry` result. This is **not** a substitute for formal trademark clearance.
+- `hexscry.com` resolves in DNS and appears registered/parked or otherwise unavailable; it did not present useful public content during the check.
+- `hexscry.dev`, `hexscry.org`, `hexscry.io` and `hexscry.net` did not resolve during the check.
 
 ## Decision
 
-Keep `AxiomRE` internally because renaming now would create churn without solving a demonstrated software-community collision. Before public branding or release:
+**Adopt `HexScry` as the public project/product name before the repository is published.**
 
-1. repeat GitHub/package/major search-engine checks close to launch;
-2. perform an appropriate trademark/name review in the intended distribution markets;
-3. change the name before public launch if that review shows meaningful confusion or legal risk.
+The improvement is clear enough to justify the one-time rename now: it removes a known AxiomRe identity conflict, has no obvious software-community collision, fits the reverse-engineering purpose, and avoids carrying a provisional brand into public packages and project formats.
 
-The codebase must therefore avoid assumptions that the final product/repository/package will permanently be called `AxiomRE`.
+Before the first public tag, repeat name/package/repository checks and perform whatever formal trademark review is appropriate for the intended distribution markets. A later rename should require a concrete legal or confusion risk; branding churn by itself is not a product improvement.

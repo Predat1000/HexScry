@@ -5,7 +5,7 @@ import { dirname, resolve } from "node:path";
 const deep = process.argv.includes("--deep");
 const capture = process.argv.includes("--capture");
 const target = resolve("fixtures/pe/minimal-x64.exe");
-const capturePath = resolve("docs/assets/axiomre-v0.1-demo.png");
+const capturePath = resolve("docs/assets/hexscry-v0.1-demo.png");
 
 if (capture) await mkdir(dirname(capturePath), { recursive: true });
 
@@ -20,25 +20,25 @@ const child = spawn(command, args, {
   stdio: "inherit",
   env: {
     ...process.env,
-    AXIOMRE_DEMO_TARGET: target,
-    AXIOMRE_DEMO_DEEP: deep ? "1" : "0",
+    HEXSCRY_DEMO_TARGET: target,
+    HEXSCRY_DEMO_DEEP: deep ? "1" : "0",
     ...(capture
       ? {
-          AXIOMRE_DEMO_CAPTURE: capturePath,
-          AXIOMRE_DEMO_EXIT_AFTER_CAPTURE: "1",
+          HEXSCRY_DEMO_CAPTURE: capturePath,
+          HEXSCRY_DEMO_EXIT_AFTER_CAPTURE: "1",
         }
       : {}),
   },
 });
 
 child.on("error", (error) => {
-  console.error(`Unable to launch AxiomRE demo: ${error.message}`);
+  console.error(`Unable to launch HexScry demo: ${error.message}`);
   process.exitCode = 1;
 });
 
 child.on("exit", (code, signal) => {
   if (signal) {
-    console.error(`AxiomRE demo stopped by ${signal}.`);
+    console.error(`HexScry demo stopped by ${signal}.`);
     process.exitCode = 1;
     return;
   }

@@ -1,12 +1,12 @@
 name: Bug report
-description: Report a reproducible AxiomRE defect
+description: Report a reproducible HexScry defect
 title: "[Bug]: "
 labels: [bug]
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping improve AxiomRE. Do not attach proprietary binaries, credentials, private data, or exploit details that should be reported privately.
+        Thanks for helping improve HexScry. Do not attach proprietary binaries, credentials, private data, or exploit details that should be reported privately.
 
   - type: textarea
     id: summary
@@ -31,7 +31,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: AxiomRE revision
+      label: HexScry revision
       description: Commit SHA or release version if available.
 
   - type: dropdown

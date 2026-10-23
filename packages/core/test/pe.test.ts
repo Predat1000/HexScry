@@ -28,7 +28,7 @@ function syntheticPe64(): Buffer {
   buffer.writeUInt32LE(0x200, section + 20);
   buffer.writeUInt32LE(0x60000020, section + 36);
 
-  buffer.write("hello-axiomre\0", 0x200, "ascii");
+  buffer.write("hello-hexscry\0", 0x200, "ascii");
   return buffer;
 }
 
@@ -241,7 +241,7 @@ test("parses a bounded PE32+ foundation report", () => {
   assert.equal(report.relocations.length, 0);
   assert.equal(report.debug.length, 0);
   assert.equal(report.tls, null);
-  assert.ok(report.strings.some((entry) => entry.value.includes("hello-axiomre")));
+  assert.ok(report.strings.some((entry) => entry.value.includes("hello-hexscry")));
 });
 
 test("parses named and ordinal PE32+ imports with IAT RVAs", () => {

@@ -1,4 +1,4 @@
-import type { BinaryReport } from "@axiomre/core";
+import type { BinaryReport } from "@hexscry/core";
 
 export interface PluginManifest {
   id: string;

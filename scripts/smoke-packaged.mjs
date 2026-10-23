@@ -10,11 +10,11 @@ if (process.platform !== "win32") {
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const root = dirname(scriptDir);
-const executable = resolve(process.argv[2] ?? join(root, "artifacts", "win-unpacked", "AxiomRE.exe"));
+const executable = resolve(process.argv[2] ?? join(root, "artifacts", "win-unpacked", "HexScry.exe"));
 const fixture = join(root, "fixtures", "pe", "minimal-x64.exe");
 const evidenceDir = join(root, ".dev-evidence");
 const runId = `packaged-smoke-${process.pid}`;
-const smokeExecutable = join(dirname(executable), `AxiomRE-Smoke-${process.pid}.exe`);
+const smokeExecutable = join(dirname(executable), `HexScry-Smoke-${process.pid}.exe`);
 const userDataDir = join(evidenceDir, `${runId}-userdata`);
 const capturePath = join(evidenceDir, `${runId}.png`);
 const stdoutPath = join(evidenceDir, `${runId}.out.log`);
@@ -36,10 +36,10 @@ try {
     cwd: root,
     env: {
       ...process.env,
-      AXIOMRE_DEMO_TARGET: fixture,
-      AXIOMRE_DEMO_DEEP: "1",
-      AXIOMRE_DEMO_CAPTURE: capturePath,
-      AXIOMRE_DEMO_EXIT_AFTER_CAPTURE: "1",
+      HEXSCRY_DEMO_TARGET: fixture,
+      HEXSCRY_DEMO_DEEP: "1",
+      HEXSCRY_DEMO_CAPTURE: capturePath,
+      HEXSCRY_DEMO_EXIT_AFTER_CAPTURE: "1",
     },
     windowsHide: true,
     stdio: ["ignore", "pipe", "pipe"],
@@ -70,7 +70,7 @@ try {
 
   // Chromium utility/GPU children can outlive the main process in remote sessions.
   // The smoke uses a uniquely named executable so cleanup cannot touch a user's
-  // normal AxiomRE instance or lock the canonical release executable for the next build.
+  // normal HexScry instance or lock the canonical release executable for the next build.
   spawnSync("taskkill", ["/F", "/T", "/IM", basename(smokeExecutable)], {
     windowsHide: true,
     stdio: "ignore",

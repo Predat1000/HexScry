@@ -22,7 +22,7 @@ function packageName(path, metadata) {
   if (typeof metadata.name === "string" && metadata.name) return metadata.name;
   const marker = "node_modules/";
   const index = path.lastIndexOf(marker);
-  if (index < 0) return path || "axiomre";
+  if (index < 0) return path || "hexscry";
   return path.slice(index + marker.length);
 }
 

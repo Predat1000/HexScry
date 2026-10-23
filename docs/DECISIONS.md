@@ -1,9 +1,9 @@
 # Engineering decisions
 
-## D001 — Working name: AxiomRE
-**Status:** provisional until public launch.
+## D001 — Public name: HexScry
+**Status:** accepted for launch; re-check before the first public tag.
 
-Reason: unblocks development. Branding is cheap to change before external release. We will re-check repository/package/domain collisions before launch.
+Reason: the original working name `AxiomRE` acquired a known collision risk with an existing AxiomRe business identity. `HexScry` had no exact GitHub or npm software collision in the 2026-10-23 review, no obvious public reverse-engineering/security product collision, and fits the evidence-first binary-analysis identity. The rename was deliberately completed before any public repository or project-format compatibility promise existed. See `docs/BRANDING_REVIEW.md`.
 
 ## D002 — Desktop shell: Electron + React + TypeScript
 **Status:** accepted for the first product stages.
@@ -13,7 +13,7 @@ Reason: fastest path to a polished cross-platform workbench with a large contrib
 ## D003 — Core/providers separation
 **Status:** accepted.
 
-Reason: AxiomRE must not become a skin whose internal model is synonymous with Ghidra. Provider adapters normalize external results.
+Reason: HexScry must not become a skin whose internal model is synonymous with Ghidra. Provider adapters normalize external results.
 
 ## D004 — License: MPL-2.0
 **Status:** accepted, to be revalidated before public launch.
@@ -38,4 +38,4 @@ The Electron main process remains ESM, but the sandboxed preload is built explic
 ## D008 — REA child processes use Electron's Node mode
 **Status:** accepted.
 
-When AxiomRE launches REA from the Electron main process, `process.execPath` points at `electron.exe`. Provider child processes therefore set `ELECTRON_RUN_AS_NODE=1` so the same `rea.mjs` entrypoint behaves consistently under Electron and ordinary Node. The first procedure inventory may trigger Ghidra auto-analysis and gets a bounded five-minute MCP timeout; later interactive operations remain bounded to one minute and support cancellation.
+When HexScry launches REA from the Electron main process, `process.execPath` points at `electron.exe`. Provider child processes therefore set `ELECTRON_RUN_AS_NODE=1` so the same `rea.mjs` entrypoint behaves consistently under Electron and ordinary Node. The first procedure inventory may trigger Ghidra auto-analysis and gets a bounded five-minute MCP timeout; later interactive operations remain bounded to one minute and support cancellation.

@@ -1,10 +1,10 @@
-import type { AxiomApi } from "../../preload/index";
+import type { HexScryApi } from "../../preload/index";
 
 declare module "*.css";
 
 declare global {
   interface Window {
-    axiom: AxiomApi;
+    hexscry: HexScryApi;
   }
 }
 

@@ -3,7 +3,7 @@ import { access } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { promisify } from "node:util";
-import type { ProcedureSummary } from "@axiomre/core";
+import type { ProcedureSummary } from "@hexscry/core";
 
 const execFileAsync = promisify(execFile);
 const requireFromHere = createRequire(import.meta.url);

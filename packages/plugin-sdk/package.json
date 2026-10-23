@@ -1,5 +1,5 @@
 {
-  "name": "@axiomre/plugin-sdk",
+  "name": "@hexscry/plugin-sdk",
   "version": "0.0.1",
   "private": true,
   "license": "MPL-2.0",
@@ -17,7 +17,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@axiomre/core": "*"
+    "@hexscry/core": "*"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

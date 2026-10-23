@@ -1,6 +1,6 @@
-# Contributing to AxiomRE
+# Contributing to HexScry
 
-AxiomRE is pre-alpha. Contributions are welcome once the repository is opened publicly, but the current architecture is intentionally narrow while the PE workflow stabilizes.
+HexScry is pre-alpha. Contributions are welcome once the repository is opened publicly, but the current architecture is intentionally narrow while the PE workflow stabilizes.
 
 ## Development setup
 

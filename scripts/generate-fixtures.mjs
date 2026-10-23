@@ -59,7 +59,7 @@ buffer.writeUInt32LE(0x60000020, section + 0x24); // code + execute + read
 
 // Entry function: xor eax,eax; ret. Remaining bytes are deterministic padding.
 buffer.set([0x31, 0xc0, 0xc3], RAW_OFFSET);
-buffer.write("AxiomRE deterministic PE fixture\0", RAW_OFFSET + 0x20, "ascii");
+buffer.write("HexScry deterministic PE fixture\0", RAW_OFFSET + 0x20, "ascii");
 
 await mkdir(fixtureDir, { recursive: true });
 await writeFile(output, buffer);

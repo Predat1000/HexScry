@@ -9,10 +9,10 @@ Thumbs.db
 .vscode/
 .idea/
 coverage/
-.axiomre-dev/
+.hexscry-dev/
 .dev-evidence/
 WORK_HANDOFF.md
-*.axiomre
+*.hexscry
 .env
 .env.*
 !.env.example
