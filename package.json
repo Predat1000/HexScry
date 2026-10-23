@@ -12,6 +12,11 @@
     "install:electron": "install-electron --no",
     "fixtures:generate": "node scripts/generate-fixtures.mjs",
     "licenses:check": "node scripts/check-licenses.mjs",
+    "release:audit": "node scripts/audit-release.mjs",
+    "package:dir": "npm run check && npm run release:audit && electron-builder --dir --config electron-builder.json",
+    "package:smoke": "node scripts/smoke-packaged.mjs",
+    "release:verify": "npm run package:dir && npm run package:smoke",
+    "package:win": "npm run check && npm run release:audit && electron-builder --win portable --config electron-builder.json",
     "smoke:rea": "npm run build:core && npm run build:provider && node scripts/smoke-rea-provider.mjs fixtures/pe/minimal-x64.exe",
     "verify:checkout": "npm ci && npm run check",
     "demo": "node scripts/run-demo.mjs",
@@ -32,5 +37,8 @@
   },
   "allowScripts": {
     "esbuild@0.28.2": true
+  },
+  "devDependencies": {
+    "electron-builder": "^26.15.3"
   }
 }

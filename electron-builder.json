@@ -1,0 +1,27 @@
+{
+  "appId": "org.axiomre.workbench",
+  "productName": "AxiomRE",
+  "electronVersion": "45.0.0",
+  "directories": {
+    "app": "apps/desktop",
+    "output": "artifacts"
+  },
+  "asar": false,
+  "files": [
+    "out/**/*",
+    "package.json",
+    "!**/node_modules/frida",
+    "!**/node_modules/frida/**/*"
+  ],
+  "extraResources": [
+    { "from": "LICENSE", "to": "licenses/AxiomRE-MPL-2.0.txt" },
+    { "from": "node_modules/rea-agents/LICENSE", "to": "licenses/REA-MIT.txt" },
+    { "from": "node_modules/rea-agents/THIRD_PARTY_NOTICES.md", "to": "licenses/REA-THIRD_PARTY_NOTICES.md" },
+    { "from": "node_modules/rea-agents/licenses", "to": "licenses/rea" },
+    { "from": "node_modules/rea-agents/third_party", "to": "licenses/rea-third-party" },
+    { "from": "node_modules/openpgp/LICENSE", "to": "licenses/OpenPGP-LGPL-3.0.txt" }
+  ],
+  "win": {
+    "target": ["portable"]
+  }
+}

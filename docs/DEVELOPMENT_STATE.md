@@ -49,6 +49,10 @@ A separate local clone has been validated from scratch with `npm ci` followed by
 
 The reproducible desktop demo uses the same deterministic fixture and real provider path. `npm run demo:capture` waits until deep analysis has completed and the recovered `entry` procedure is rendered, captures the renderer through Electron's own `capturePage()` API, writes `docs/assets/axiomre-v0.1-demo.png`, and exits. This has been verified end to end on the development host.
 
+Windows distribution now has a local release gate. `npm run release:verify` passes the full project check, release-license audit, `electron-builder` unpacked build and a deep smoke of the actual packaged `artifacts/win-unpacked/AxiomRE.exe`. The smoke launches a uniquely named copy so remote-session Chromium children cannot lock the canonical executable; the latest verified final-state capture was 77,105 bytes. The package contains AxiomRE core/provider + REA 6.7.0, excludes optional Frida, exposes required AxiomRE/REA/OpenPGP license resources, and leaves Ghidra/JADX external. ASAR is deliberately disabled for v0.1 because REA uses filesystem-backed child-process/bridge assets; changing that policy requires a fresh packaged-runtime review.
+
+The Windows portable target has also been built and exercised through its real self-extracting path. `artifacts/AxiomRE 0.0.1.exe` is 111,723,729 bytes (106.55 MiB), SHA-256 `368E7BB068E724128F9B8CD8E335B5C779827AB0B35C18CE1FC8ED4DB6F73F1D`. A portable smoke confirmed auto-extraction, packaged Electron startup, REA/Ghidra/JADX detection, live Ghidra recovery of the fixture `entry` procedure, a 76,794-byte final-state capture, and clean shutdown. This hash identifies the current local pre-alpha artifact only; public release artifacts must be rebuilt and rehashed from the final tagged source.
+
 ## Performance observations
 
 The first Ghidra analysis is intentionally expensive compared with later navigation. On recent development runs, the project fixture took roughly 15–18 seconds for the first inventory; repeated inventory was ~4 ms, exact instruction inspection ~5–13 ms, address resolution/byte reads ~7–10 ms, and function analysis stayed below a tenth of a second on the same fixture.
@@ -62,8 +66,8 @@ Performance numbers are observations, not contractual benchmarks; they vary by h
 Before a public v0.1 community launch, the project still needs:
 
 - a hosted CI run on supported platforms once a remote is available;
-- a final packaging/redistribution license review immediately before release (the current dependency policy/check passes);
 - a final public name/trademark decision; `AxiomRE` remains a provisional codename;
-- one clean external-contributor onboarding validation once the repository can be shared privately or publicly.
+- one clean external-contributor onboarding validation once the repository can be shared privately or publicly;
+- repeat the already-passing release/license/package verification immediately before the public tag and inspect the final portable artifact.
 
 Do not broaden into a debugger, plugin marketplace or additional binary formats before the PE workflow is reliable and the launch gate in `docs/ROADMAP.md` is satisfied.

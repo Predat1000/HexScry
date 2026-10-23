@@ -64,6 +64,15 @@ npm run demo:capture  # deep demo, capture the stable renderer, then exit
 
 For a dependency-clean verification equivalent to the CI entry path, run `npm run verify:checkout`. `npm install`/`npm ci` bring the supported REA version. Native Ghidra analysis additionally requires a compatible JDK and `GHIDRA_INSTALL_DIR`; the desktop reports whether those external tools are available instead of silently downloading them.
 
+### Release verification (Windows)
+
+```powershell
+npm run release:verify  # check + license audit + unpacked package + packaged deep smoke
+npm run package:win     # create the portable Windows artifact after verification
+```
+
+The packaged smoke launches the actual built `AxiomRE.exe`, opens the deterministic fixture, completes live REA/Ghidra analysis and requires a final renderer capture before passing. Ghidra/JADX remain external tools and are not redistributed. See `docs/DISTRIBUTION.md` for the package/license policy.
+
 See `CONTRIBUTING.md` before contributing and `SECURITY.md` for the untrusted-input model and vulnerability-reporting rules.
 
 ## Project principles

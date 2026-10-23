@@ -2,6 +2,8 @@
   "name": "@axiomre/desktop",
   "version": "0.0.1",
   "private": true,
+  "description": "Evidence-first reverse engineering workbench.",
+  "author": "AxiomRE contributors",
   "license": "MPL-2.0",
   "type": "module",
   "main": "./out/main/index.js",
