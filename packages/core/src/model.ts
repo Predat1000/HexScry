@@ -36,6 +36,26 @@ export interface RelocationInfo {
   widthBytes: number | null;
 }
 
+export interface CodeViewInfo {
+  signature: "RSDS" | "NB10";
+  pdbPath: string;
+  guid: string | null;
+  age: number;
+  timestamp: number | null;
+}
+
+export interface DebugInfo {
+  type: number;
+  typeName: string;
+  timestamp: number;
+  majorVersion: number;
+  minorVersion: number;
+  sizeOfData: number;
+  dataRva: number;
+  dataFileOffset: number | null;
+  codeView: CodeViewInfo | null;
+}
+
 export interface ProcedureSummary {
   address: string;
   name: string;
@@ -131,6 +151,7 @@ export interface BinaryReport {
   imports: ImportInfo[];
   exports: ExportInfo[];
   relocations: RelocationInfo[];
+  debug: DebugInfo[];
   strings: ExtractedString[];
   limitations: string[];
 }

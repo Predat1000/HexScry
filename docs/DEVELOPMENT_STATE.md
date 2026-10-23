@@ -7,7 +7,7 @@ This document summarizes the portable project state for contributors. Machine-sp
 AxiomRE currently supports one deliberately narrow native-analysis path:
 
 1. open a Windows PE32/PE32+ executable or library;
-2. inspect bounded PE metadata, sections, named/ordinal imports, named/ordinal-only/forwarded exports, base relocations, strings and SHA-256 with the owned core parser;
+2. inspect bounded PE metadata, sections, named/ordinal imports, named/ordinal-only/forwarded exports, base relocations, Debug Directory / CodeView PDB identity, strings and SHA-256 with the owned core parser;
 3. start a persistent REA/Ghidra MCP session for deep analysis;
 4. enumerate analyzed procedures;
 5. inspect a provider-neutral function dossier with pseudocode, assembly, callers/callees and typed references;
@@ -25,9 +25,9 @@ Foundation PE reads are capped at 512 MiB before allocation, and selected `.axio
 
 ## Regression baseline
 
-`npm run check` regenerates the project-owned deterministic PE fixture and currently runs 36 tests:
+`npm run check` regenerates the project-owned deterministic PE fixture and currently runs 39 tests:
 
-- 20 core tests;
+- 23 core tests;
 - 16 provider-adapter tests.
 
 The deterministic fixture is `fixtures/pe/minimal-x64.exe`. It is produced entirely by `scripts/generate-fixtures.mjs` and contains one minimal x64 entry function.
@@ -41,7 +41,7 @@ A real Ghidra/REA smoke against that fixture has verified:
 - interior-address-to-procedure resolution;
 - bounded provider byte reads.
 
-The owned PE import parser has also been exercised against `choice.exe`, recovering 86 imports across seven DLLs without import-table limitations. The export parser has been exercised against `kernel32.dll`, recovering 1,671 exports including 206 forwarders without export-table limitations. The base-relocation parser has been exercised against `notepad.exe` (361 `DIR64` relocations) and `kernel32.dll` (432 `DIR64` relocations) without relocation-table limitations.
+The owned PE import parser has also been exercised against `choice.exe`, recovering 86 imports across seven DLLs without import-table limitations. The export parser has been exercised against `kernel32.dll`, recovering 1,671 exports including 206 forwarders without export-table limitations. The base-relocation parser has been exercised against `notepad.exe` (361 `DIR64` relocations) and `kernel32.dll` (432 `DIR64` relocations) without relocation-table limitations. Debug Directory parsing has been exercised against the same Windows binaries: `notepad.exe` exposes `notepad.pdb` with an RSDS GUID/age plus POGO and REPRO entries; `kernel32.dll` exposes `kernel32.pdb` with RSDS identity plus POGO, REPRO and `EX_DLLCHARACTERISTICS` entries, without debug-directory parsing errors.
 
 Deep smoke testing is optional because it requires a compatible JDK and Ghidra installation. Core CI does not silently install those external tools.
 

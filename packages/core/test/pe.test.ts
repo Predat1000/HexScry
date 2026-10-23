@@ -107,6 +107,61 @@ function syntheticPe64WithRelocations(): Buffer {
   return buffer;
 }
 
+function syntheticPe64WithRsdsDebug(): Buffer {
+  const buffer = syntheticPe64();
+  const optional = 0x84 + 20;
+  buffer.writeUInt32LE(16, optional + 108);
+
+  const debugDirectory = optional + 112 + 6 * 8;
+  buffer.writeUInt32LE(0x1100, debugDirectory);
+  buffer.writeUInt32LE(28, debugDirectory + 4);
+
+  const entry = 0x300;
+  const pdbPath = "C:\\symbols\\fixture.pdb";
+  const sizeOfData = 24 + Buffer.byteLength(pdbPath, "ascii") + 1;
+  buffer.writeUInt32LE(0x12345678, entry + 4);
+  buffer.writeUInt32LE(2, entry + 12);
+  buffer.writeUInt32LE(sizeOfData, entry + 16);
+  buffer.writeUInt32LE(0x1140, entry + 20);
+  buffer.writeUInt32LE(0x340, entry + 24);
+
+  const data = 0x340;
+  buffer.write("RSDS", data, "ascii");
+  buffer.writeUInt32LE(0x11223344, data + 4);
+  buffer.writeUInt16LE(0x5566, data + 8);
+  buffer.writeUInt16LE(0x7788, data + 10);
+  Buffer.from([0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00]).copy(buffer, data + 12);
+  buffer.writeUInt32LE(3, data + 20);
+  buffer.write(`${pdbPath}\0`, data + 24, "ascii");
+  return buffer;
+}
+
+function syntheticPe64WithNb10Debug(): Buffer {
+  const buffer = syntheticPe64();
+  const optional = 0x84 + 20;
+  buffer.writeUInt32LE(16, optional + 108);
+
+  const debugDirectory = optional + 112 + 6 * 8;
+  buffer.writeUInt32LE(0x1100, debugDirectory);
+  buffer.writeUInt32LE(28, debugDirectory + 4);
+
+  const entry = 0x300;
+  const pdbPath = "C:\\legacy\\fixture.pdb";
+  const sizeOfData = 16 + Buffer.byteLength(pdbPath, "ascii") + 1;
+  buffer.writeUInt32LE(2, entry + 12);
+  buffer.writeUInt32LE(sizeOfData, entry + 16);
+  buffer.writeUInt32LE(0x1140, entry + 20);
+  buffer.writeUInt32LE(0x340, entry + 24);
+
+  const data = 0x340;
+  buffer.write("NB10", data, "ascii");
+  buffer.writeUInt32LE(0, data + 4);
+  buffer.writeUInt32LE(0xaabbccdd, data + 8);
+  buffer.writeUInt32LE(2, data + 12);
+  buffer.write(`${pdbPath}\0`, data + 16, "ascii");
+  return buffer;
+}
+
 test("parses a bounded PE32+ foundation report", () => {
   const report = parsePortableExecutable("fixture.exe", syntheticPe64());
   assert.equal(report.format, "PE32+");
@@ -118,6 +173,7 @@ test("parses a bounded PE32+ foundation report", () => {
   assert.equal(report.imports.length, 0);
   assert.equal(report.exports.length, 0);
   assert.equal(report.relocations.length, 0);
+  assert.equal(report.debug.length, 0);
   assert.ok(report.strings.some((entry) => entry.value.includes("hello-axiomre")));
 });
 
@@ -145,6 +201,53 @@ test("reports malformed base-relocation blocks without reading past the declared
   const report = parsePortableExecutable("bad-relocs.exe", buffer);
   assert.deepEqual(report.relocations, []);
   assert.ok(report.limitations.some((item) => item.includes("invalid size 6")));
+});
+
+test("parses RSDS CodeView debug metadata with PDB identity", () => {
+  const report = parsePortableExecutable("debug.exe", syntheticPe64WithRsdsDebug());
+  assert.deepEqual(report.debug, [
+    {
+      type: 2,
+      typeName: "CODEVIEW",
+      timestamp: 0x12345678,
+      majorVersion: 0,
+      minorVersion: 0,
+      sizeOfData: 47,
+      dataRva: 0x1140,
+      dataFileOffset: 0x340,
+      codeView: {
+        signature: "RSDS",
+        pdbPath: "C:\\symbols\\fixture.pdb",
+        guid: "11223344-5566-7788-99AA-BBCCDDEEFF00",
+        age: 3,
+        timestamp: null,
+      },
+    },
+  ]);
+});
+
+test("parses NB10 CodeView debug metadata", () => {
+  const report = parsePortableExecutable("legacy-debug.exe", syntheticPe64WithNb10Debug());
+  assert.equal(report.debug.length, 1);
+  assert.deepEqual(report.debug[0]?.codeView, {
+    signature: "NB10",
+    pdbPath: "C:\\legacy\\fixture.pdb",
+    guid: null,
+    age: 2,
+    timestamp: 0xaabbccdd,
+  });
+});
+
+test("preserves a debug entry while reporting a truncated CodeView payload", () => {
+  const buffer = syntheticPe64WithRsdsDebug();
+  buffer.writeUInt32LE(0x100, 0x300 + 16);
+  buffer.writeUInt32LE(0, 0x300 + 20);
+  buffer.writeUInt32LE(0x3f0, 0x300 + 24);
+  const report = parsePortableExecutable("bad-debug.exe", buffer);
+  assert.equal(report.debug.length, 1);
+  assert.equal(report.debug[0]?.typeName, "CODEVIEW");
+  assert.equal(report.debug[0]?.codeView, null);
+  assert.ok(report.limitations.some((item) => item.includes("payload is truncated")));
 });
 
 test("parses named, aliased, ordinal-only and forwarded PE32+ exports", () => {

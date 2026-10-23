@@ -216,7 +216,7 @@ export default function App() {
   const [navQuery, setNavQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
-  const [peSymbolView, setPeSymbolView] = useState<"imports" | "exports" | "relocations">("imports");
+  const [peSymbolView, setPeSymbolView] = useState<"imports" | "exports" | "relocations" | "debug">("imports");
   const [peSymbolFilter, setPeSymbolFilter] = useState("");
   const [procedures, setProcedures] = useState<ProcedureSummary[]>([]);
   const [procedureFilter, setProcedureFilter] = useState("");
@@ -291,6 +291,20 @@ export default function App() {
           String(entry.type).includes(query),
         )
       : report.relocations;
+  }, [report, peSymbolFilter]);
+
+  const visibleDebug = useMemo(() => {
+    if (!report) return [];
+    const query = peSymbolFilter.trim().toLowerCase();
+    return query
+      ? report.debug.filter((entry) =>
+          entry.typeName.toLowerCase().includes(query) ||
+          String(entry.type).includes(query) ||
+          entry.codeView?.pdbPath.toLowerCase().includes(query) ||
+          entry.codeView?.guid?.toLowerCase().includes(query) ||
+          entry.codeView?.signature.toLowerCase().includes(query),
+        )
+      : report.debug;
   }, [report, peSymbolFilter]);
 
   const visibleProcedures = useMemo(() => {
@@ -603,13 +617,14 @@ export default function App() {
                       <button className={peSymbolView === "imports" ? "active" : ""} onClick={() => { setPeSymbolView("imports"); setPeSymbolFilter(""); }}>Imports <span>{report.imports.length}</span></button>
                       <button className={peSymbolView === "exports" ? "active" : ""} onClick={() => { setPeSymbolView("exports"); setPeSymbolFilter(""); }}>Exports <span>{report.exports.length}</span></button>
                       <button className={peSymbolView === "relocations" ? "active" : ""} onClick={() => { setPeSymbolView("relocations"); setPeSymbolFilter(""); }}>Relocs <span>{report.relocations.length}</span></button>
+                      <button className={peSymbolView === "debug" ? "active" : ""} onClick={() => { setPeSymbolView("debug"); setPeSymbolFilter(""); }}>Debug <span>{report.debug.length}</span></button>
                     </div>
                   </div>
                   <input
                     value={peSymbolFilter}
                     onChange={(event) => setPeSymbolFilter(event.target.value)}
-                    placeholder={peSymbolView === "imports" ? "Filter DLL / API…" : peSymbolView === "exports" ? "Filter export / forwarder…" : "Filter RVA / relocation type…"}
-                    disabled={peSymbolView === "imports" ? report.imports.length === 0 : peSymbolView === "exports" ? report.exports.length === 0 : report.relocations.length === 0}
+                    placeholder={peSymbolView === "imports" ? "Filter DLL / API…" : peSymbolView === "exports" ? "Filter export / forwarder…" : peSymbolView === "relocations" ? "Filter RVA / relocation type…" : "Filter PDB / GUID / debug type…"}
+                    disabled={peSymbolView === "imports" ? report.imports.length === 0 : peSymbolView === "exports" ? report.exports.length === 0 : peSymbolView === "relocations" ? report.relocations.length === 0 : report.debug.length === 0}
                   />
                 </div>
                 <div className="imports-list">
@@ -650,6 +665,19 @@ export default function App() {
                         </div>
                       ))}
                       {visibleRelocations.length === 0 && <p className="muted">{report.relocations.length === 0 ? "No PE base relocations declared." : "No matching relocations."}</p>}
+                    </>
+                  )}
+                  {peSymbolView === "debug" && (
+                    <>
+                      {visibleDebug.map((entry, index) => (
+                        <div className="debug-row" key={`${entry.type}-${entry.dataRva}-${entry.dataFileOffset ?? "none"}-${index}`}>
+                          <code>{entry.typeName}</code>
+                          <span title={entry.codeView?.pdbPath}>{entry.codeView?.pdbPath ?? "(no CodeView identity)"}</span>
+                          <code title={entry.codeView?.guid ?? undefined}>{entry.codeView?.guid ?? (entry.dataRva ? `RVA ${hex(entry.dataRva)}` : entry.dataFileOffset !== null ? `file ${hex(entry.dataFileOffset)}` : "no payload")}</code>
+                          <span>{entry.codeView ? `${entry.codeView.signature} · age ${entry.codeView.age}` : `${entry.sizeOfData} B · v${entry.majorVersion}.${entry.minorVersion}`}</span>
+                        </div>
+                      ))}
+                      {visibleDebug.length === 0 && <p className="muted">{report.debug.length === 0 ? "No PE debug-directory entries declared." : "No matching debug entries."}</p>}
                     </>
                   )}
                 </div>

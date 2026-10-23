@@ -142,13 +142,14 @@ dt { color: #727b8a; } dd { margin: 0; text-align: right; font-family: ui-monosp
 .symbol-tabs button.active { color: #e4e8ef; border-color: #586476; background: #1a2029; }
 .symbol-tabs button span { color: #667082; margin-left: 4px; }
 .imports-list { overflow: auto; font-size: 11px; }
-.import-row, .export-row { display: grid; gap: 10px; align-items: center; padding: 7px 12px; border-bottom: 1px solid #191d24; }
+.import-row, .export-row, .debug-row { display: grid; gap: 10px; align-items: center; padding: 7px 12px; border-bottom: 1px solid #191d24; }
 .import-row { grid-template-columns: minmax(110px, .8fr) minmax(150px, 1.3fr) 92px 62px; }
 .export-row { grid-template-columns: 48px minmax(150px, 1.1fr) 92px minmax(130px, 1fr); }
-.import-row code, .export-row code { color: #bfc7d3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.debug-row { grid-template-columns: 88px minmax(180px, 1.45fr) minmax(150px, 1fr) 110px; }
+.import-row code, .export-row code, .debug-row code { color: #bfc7d3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .import-row > span:last-child { color: #667082; font-size: 9px; text-align: right; }
-.import-library, .export-row > span:nth-child(2) { color: #8994a6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.export-row > span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
+.import-library, .export-row > span:nth-child(2), .debug-row > span:nth-child(2) { color: #8994a6; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.export-row > span:last-child, .debug-row > span:last-child { color: #667082; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
 .export-row .forwarder { color: #d1ad7d; }
 .export-row .local-export { color: #6f8f7b; }
 

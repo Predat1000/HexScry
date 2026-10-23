@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
-import type { BinaryReport, ExportInfo, ExtractedString, ImportInfo, RelocationInfo, SectionInfo } from "./model.js";
+import type { BinaryReport, CodeViewInfo, DebugInfo, ExportInfo, ExtractedString, ImportInfo, RelocationInfo, SectionInfo } from "./model.js";
 
 const PE_SIGNATURE = 0x00004550;
 const MAX_STRINGS = 500;
@@ -10,7 +10,9 @@ const MAX_IMPORT_SYMBOLS = 4096;
 const MAX_EXPORT_SYMBOLS = 4096;
 const MAX_RELOCATION_BLOCKS = 16_384;
 const MAX_RELOCATION_ENTRIES = 262_144;
+const MAX_DEBUG_ENTRIES = 1024;
 const MAX_PE_STRING_BYTES = 512;
+const MAX_CODEVIEW_PATH_BYTES = 4096;
 
 function ensureRange(buffer: Buffer, offset: number, size: number, label: string): void {
   if (!Number.isInteger(offset) || offset < 0 || size < 0 || offset + size > buffer.length) {
@@ -59,12 +61,12 @@ function rvaToFileOffset(
   return null;
 }
 
-function readAsciiZ(buffer: Buffer, offset: number, label: string): string {
+function readAsciiZ(buffer: Buffer, offset: number, label: string, maxBytes = MAX_PE_STRING_BYTES): string {
   ensureRange(buffer, offset, 1, label);
-  const endLimit = Math.min(buffer.length, offset + MAX_PE_STRING_BYTES);
+  const endLimit = Math.min(buffer.length, offset + maxBytes);
   let end = offset;
   while (end < endLimit && buffer[end] !== 0) end += 1;
-  if (end === endLimit) throw new Error(`${label} is not NUL-terminated within ${MAX_PE_STRING_BYTES} bytes.`);
+  if (end === endLimit) throw new Error(`${label} is not NUL-terminated within ${maxBytes} bytes.`);
   return buffer.subarray(offset, end).toString("ascii");
 }
 
@@ -475,6 +477,193 @@ function parseRelocations(
   return { relocations, limitations };
 }
 
+function debugTypeName(type: number): string {
+  switch (type) {
+    case 0: return "UNKNOWN";
+    case 1: return "COFF";
+    case 2: return "CODEVIEW";
+    case 3: return "FPO";
+    case 4: return "MISC";
+    case 5: return "EXCEPTION";
+    case 6: return "FIXUP";
+    case 7: return "OMAP_TO_SRC";
+    case 8: return "OMAP_FROM_SRC";
+    case 9: return "BORLAND";
+    case 10: return "RESERVED10";
+    case 11: return "CLSID";
+    case 12: return "VC_FEATURE";
+    case 13: return "POGO";
+    case 14: return "ILTCG";
+    case 16: return "REPRO";
+    case 17: return "EMBEDDED_PORTABLE_PDB";
+    case 19: return "PDB_CHECKSUM";
+    case 20: return "EX_DLLCHARACTERISTICS";
+    default: return `TYPE_${type}`;
+  }
+}
+
+function formatRsdsGuid(buffer: Buffer, offset: number): string {
+  ensureRange(buffer, offset, 16, "CodeView RSDS GUID");
+  const data1 = buffer.readUInt32LE(offset).toString(16).padStart(8, "0");
+  const data2 = buffer.readUInt16LE(offset + 4).toString(16).padStart(4, "0");
+  const data3 = buffer.readUInt16LE(offset + 6).toString(16).padStart(4, "0");
+  const data4a = buffer.subarray(offset + 8, offset + 10).toString("hex");
+  const data4b = buffer.subarray(offset + 10, offset + 16).toString("hex");
+  return `${data1}-${data2}-${data3}-${data4a}-${data4b}`.toUpperCase();
+}
+
+function parseCodeView(
+  buffer: Buffer,
+  dataOffset: number,
+  sizeOfData: number,
+  label: string,
+): { codeView: CodeViewInfo | null; limitation: string | null } {
+  if (sizeOfData < 4) {
+    return { codeView: null, limitation: `${label} is too small to contain a CodeView signature.` };
+  }
+  const signature = buffer.subarray(dataOffset, dataOffset + 4).toString("ascii");
+
+  try {
+    if (signature === "RSDS") {
+      if (sizeOfData < 25) {
+        return { codeView: null, limitation: `${label} RSDS payload is truncated.` };
+      }
+      const pathBytes = Math.min(MAX_CODEVIEW_PATH_BYTES, sizeOfData - 24);
+      return {
+        codeView: {
+          signature: "RSDS",
+          pdbPath: readAsciiZ(buffer, dataOffset + 24, `${label} PDB path`, pathBytes),
+          guid: formatRsdsGuid(buffer, dataOffset + 4),
+          age: buffer.readUInt32LE(dataOffset + 20),
+          timestamp: null,
+        },
+        limitation: null,
+      };
+    }
+
+    if (signature === "NB10") {
+      if (sizeOfData < 17) {
+        return { codeView: null, limitation: `${label} NB10 payload is truncated.` };
+      }
+      const pathBytes = Math.min(MAX_CODEVIEW_PATH_BYTES, sizeOfData - 16);
+      return {
+        codeView: {
+          signature: "NB10",
+          pdbPath: readAsciiZ(buffer, dataOffset + 16, `${label} PDB path`, pathBytes),
+          guid: null,
+          age: buffer.readUInt32LE(dataOffset + 12),
+          timestamp: buffer.readUInt32LE(dataOffset + 8),
+        },
+        limitation: null,
+      };
+    }
+  } catch (error) {
+    return { codeView: null, limitation: error instanceof Error ? error.message : String(error) };
+  }
+
+  const printable = /^[ -~]{4}$/u.test(signature) ? signature : `0x${buffer.subarray(dataOffset, dataOffset + 4).toString("hex")}`;
+  return { codeView: null, limitation: `${label} uses unsupported CodeView signature ${printable}.` };
+}
+
+function parseDebugDirectory(
+  buffer: Buffer,
+  format: "PE32" | "PE32+",
+  optional: number,
+  optionalSize: number,
+  sections: readonly SectionInfo[],
+  sizeOfHeaders: number,
+): { debug: DebugInfo[]; limitations: string[] } {
+  const debug: DebugInfo[] = [];
+  const limitations: string[] = [];
+  const numberOfDirectoriesOffset = format === "PE32+" ? 108 : 92;
+  const dataDirectoryOffset = format === "PE32+" ? 112 : 96;
+  const debugDirectoryIndex = 6;
+
+  if (optionalSize < numberOfDirectoriesOffset + 4) {
+    return { debug, limitations: ["PE optional header does not expose data-directory metadata for debug entries."] };
+  }
+  const directoryCount = buffer.readUInt32LE(optional + numberOfDirectoriesOffset);
+  if (directoryCount <= debugDirectoryIndex) return { debug, limitations };
+
+  const directoryRelativeOffset = dataDirectoryOffset + debugDirectoryIndex * 8;
+  if (optionalSize < directoryRelativeOffset + 8) {
+    return { debug, limitations: ["PE optional header truncates the debug data-directory entry."] };
+  }
+
+  const debugRva = buffer.readUInt32LE(optional + directoryRelativeOffset);
+  const debugSize = buffer.readUInt32LE(optional + directoryRelativeOffset + 4);
+  if (debugRva === 0 || debugSize === 0) return { debug, limitations };
+  if (debugSize < 28) {
+    return { debug, limitations: [`Debug directory size ${debugSize} is smaller than one IMAGE_DEBUG_DIRECTORY entry.`] };
+  }
+  if (debugSize % 28 !== 0) {
+    limitations.push(`Debug directory size ${debugSize} is not a multiple of 28 bytes; trailing bytes are ignored.`);
+  }
+
+  const declaredEntries = Math.floor(debugSize / 28);
+  const entryCount = Math.min(declaredEntries, MAX_DEBUG_ENTRIES);
+  if (declaredEntries > MAX_DEBUG_ENTRIES) {
+    limitations.push(`Debug directory scan is intentionally capped at ${MAX_DEBUG_ENTRIES} entries.`);
+  }
+
+  for (let index = 0; index < entryCount; index += 1) {
+    const entryRva = debugRva + index * 28;
+    if (!Number.isSafeInteger(entryRva) || entryRva > 0xffff_ffff) {
+      limitations.push("Debug directory entry address exceeds the PE32 RVA range.");
+      break;
+    }
+    const entryOffset = rvaToFileOffset(sections, entryRva, buffer.length, sizeOfHeaders);
+    if (entryOffset === null || entryOffset + 28 > buffer.length) {
+      limitations.push(`Debug directory entry ${index} at RVA 0x${entryRva.toString(16)} is not fully file-backed.`);
+      break;
+    }
+
+    const timestamp = buffer.readUInt32LE(entryOffset + 4);
+    const majorVersion = buffer.readUInt16LE(entryOffset + 8);
+    const minorVersion = buffer.readUInt16LE(entryOffset + 10);
+    const type = buffer.readUInt32LE(entryOffset + 12);
+    const sizeOfData = buffer.readUInt32LE(entryOffset + 16);
+    const dataRva = buffer.readUInt32LE(entryOffset + 20);
+    const pointerToRawData = buffer.readUInt32LE(entryOffset + 24);
+
+    let dataFileOffset: number | null = null;
+    if (sizeOfData > 0) {
+      if (pointerToRawData > 0 && pointerToRawData < buffer.length) {
+        dataFileOffset = pointerToRawData;
+      } else if (dataRva > 0) {
+        dataFileOffset = rvaToFileOffset(sections, dataRva, buffer.length, sizeOfHeaders);
+      }
+    }
+
+    let codeView: CodeViewInfo | null = null;
+    if (type === 2 && sizeOfData > 0) {
+      if (dataFileOffset === null) {
+        limitations.push(`CodeView debug entry ${index} does not point to file-backed data.`);
+      } else if (sizeOfData > buffer.length - dataFileOffset) {
+        limitations.push(`CodeView debug entry ${index} payload is truncated.`);
+      } else {
+        const parsed = parseCodeView(buffer, dataFileOffset, sizeOfData, `CodeView debug entry ${index}`);
+        codeView = parsed.codeView;
+        if (parsed.limitation) limitations.push(parsed.limitation);
+      }
+    }
+
+    debug.push({
+      type,
+      typeName: debugTypeName(type),
+      timestamp,
+      majorVersion,
+      minorVersion,
+      sizeOfData,
+      dataRva,
+      dataFileOffset,
+      codeView,
+    });
+  }
+
+  return { debug, limitations };
+}
+
 export function extractAsciiStrings(
   buffer: Buffer,
   minLength = MIN_STRING_LENGTH,
@@ -557,12 +746,14 @@ export function parsePortableExecutable(path: string, buffer: Buffer): BinaryRep
   const importResult = parseImports(buffer, format, optional, optionalSize, sections, sizeOfHeaders);
   const exportResult = parseExports(buffer, format, optional, optionalSize, sections, sizeOfHeaders);
   const relocationResult = parseRelocations(buffer, format, optional, optionalSize, sections, sizeOfHeaders);
+  const debugResult = parseDebugDirectory(buffer, format, optional, optionalSize, sections, sizeOfHeaders);
   const strings = extractAsciiStrings(buffer);
   const limitations: string[] = [
     ...importResult.limitations,
     ...exportResult.limitations,
     ...relocationResult.limitations,
-    "This foundation parser does not yet resolve debug symbols, functions or cross-references.",
+    ...debugResult.limitations,
+    "This foundation parser does not yet resolve full debug symbols, functions or cross-references.",
   ];
   if (strings.length >= MAX_STRINGS) {
     limitations.push(`Printable string output is intentionally capped at ${MAX_STRINGS} entries.`);
@@ -583,6 +774,7 @@ export function parsePortableExecutable(path: string, buffer: Buffer): BinaryRep
     imports: importResult.imports,
     exports: exportResult.exports,
     relocations: relocationResult.relocations,
+    debug: debugResult.debug,
     strings,
     limitations,
   };

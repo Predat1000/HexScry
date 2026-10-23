@@ -18,7 +18,7 @@ The current vertical slice is intentionally narrow but real:
 
 - open a Windows PE file (`.exe` / `.dll`);
 - parse core PE metadata ourselves, with bounded reads;
-- list sections, parse named/ordinal imports with IAT RVAs, parse named/ordinal-only/forwarded exports, parse bounded PE base relocations, extract bounded printable strings and calculate SHA-256;
+- list sections, parse named/ordinal imports with IAT RVAs, parse named/ordinal-only/forwarded exports, parse bounded PE base relocations, inspect Debug Directory / CodeView PDB identity, extract bounded printable strings and calculate SHA-256;
 - start one persistent REA/Ghidra MCP session per target;
 - inventory local/external procedures after Ghidra analysis;
 - select a local procedure and inspect normalized pseudocode + assembly;
