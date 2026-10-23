@@ -45,7 +45,7 @@ The owned PE import parser has also been exercised against `choice.exe`, recover
 
 Deep smoke testing is optional because it requires a compatible JDK and Ghidra installation. Core CI does not silently install those external tools.
 
-A pre-rename `git clone --no-local` of release-pipeline commit `8cb05a3` was validated from scratch before the HexScry identity change. `npm ci` installed 572 packages with zero reported vulnerabilities; Frida and the dev-only `electron-winstaller` install scripts remained unapproved. That clone passed all 42 tests, the full desktop build, release-license audit, unpacked Windows packaging and the actual packaged deep smoke via `npm run release:verify`, then passed a second deep smoke through the portable self-extracting path. A fresh post-rename clean-clone validation is required after the HexScry rename commit.
+A post-rename `git clone --no-local` of identity commit `cff4475` has now been validated from scratch. After a single clean `npm ci`, the clone installed 572 packages with zero reported vulnerabilities; Frida and the dev-only `electron-winstaller` install scripts remained unapproved. It passed all 42 tests, the full desktop build, release-license audit, unpacked Windows packaging and the actual packaged deep smoke via `npm run release:verify` (77,008-byte final-state capture). It then built `HexScry 0.0.1.exe` at 111,764,507 bytes with SHA-256 `DDC46284343159CB0EE1F224BDFC781BB5775BD73DA3024DEEA5377B180406E9` and passed a second deep smoke through the real self-extracting path (76,649-byte final-state capture). This proves the HexScry release path does not depend on the primary checkout's existing `node_modules`, ignored handoff/evidence files or prior build artifacts.
 
 The reproducible desktop demo uses the same deterministic fixture and real provider path. `npm run demo:capture` waits until deep analysis has completed and the recovered `entry` procedure is rendered, captures the renderer through Electron's own `capturePage()` API, writes `docs/assets/hexscry-v0.1-demo.png`, and exits. This has been verified end to end on the development host.
 
@@ -66,7 +66,7 @@ Performance numbers are observations, not contractual benchmarks; they vary by h
 Before a public v0.1 community launch, the project still needs:
 
 - a hosted CI run on supported platforms once a remote is available;
-- one clean post-rename checkout/release validation and one external-contributor onboarding validation once the repository can be shared privately or publicly;
+- one external-contributor onboarding validation once the repository can be shared privately or publicly;
 - repeat the name/package/trademark checks and the already-passing release/license/package verification immediately before the public tag, then inspect and hash the final portable artifact.
 
 Do not broaden into a debugger, plugin marketplace or additional binary formats before the PE workflow is reliable and the launch gate in `docs/ROADMAP.md` is satisfied.
