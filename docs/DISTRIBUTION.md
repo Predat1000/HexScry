@@ -39,6 +39,8 @@ Before producing a public binary:
 
 `electron-builder.json` is the authoritative package-content policy. Release resources expose AxiomRE's MPL license, REA's MIT license and third-party notices, REA's retained license inventory, and OpenPGP's LGPL text alongside the application runtime.
 
+Current v0.1 verification targets **functional reproducibility**, not byte-for-byte reproducible NSIS output. Two clean builds from the same source have differed by four bytes while both passed the same packaged deep-analysis smoke. Do not add deterministic-packaging machinery unless release signing, supply-chain verification or another concrete requirement makes the benefit worth the complexity.
+
 Electron/Chromium retain their own upstream notices in the Electron distribution. Re-check actual packaged contents and licenses whenever Electron, REA, OpenPGP, the package manager lockfile or the builder configuration changes.
 
 This document records project release policy; it is not a substitute for legal advice.
