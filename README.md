@@ -25,7 +25,7 @@ The current vertical slice is intentionally narrow but real:
 - navigate resolved callers/callees and typed incoming/outgoing xrefs without exposing provider-specific JSON to the UI;
 - inspect an exact address as decoded instruction, data, non-boundary, undecodable or outside-memory evidence;
 - compare original file bytes with Ghidra's loaded-memory bytes in a bounded hex evidence view, marking bytes covered by known PE base relocations so loader fixups are not mistaken for unexplained mutation;
-- jump by canonical address, function name, imported API/DLL or foundation string using the already-open analysis session;
+- jump by canonical address, function name, imported API/DLL or foundation string using the already-open analysis session, and navigate directly from PE entry-point/TLS-callback evidence after deep analysis;
 - save/open a minimal `.axiomre` project that verifies the target SHA-256 before reuse;
 - persist analyst-owned aliases/comments per function without modifying Ghidra or the executable;
 - regenerate and test a project-owned deterministic PE32+ x64 fixture for legal regression coverage;

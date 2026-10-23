@@ -11,7 +11,7 @@ AxiomRE currently supports one deliberately narrow native-analysis path:
 3. start a persistent REA/Ghidra MCP session for deep analysis;
 4. enumerate analyzed procedures;
 5. inspect a provider-neutral function dossier with pseudocode, assembly, callers/callees and typed references;
-6. navigate by canonical address, function name, imported API/DLL or foundation string;
+6. navigate by canonical address, function name, imported API/DLL or foundation string, or jump directly from PE entry-point/TLS-callback evidence once deep analysis is available;
 7. inspect the exact address as decoded instruction, data, non-boundary, undecodable or outside-memory evidence;
 8. compare bounded original file bytes with provider-loaded memory bytes, marking coverage from known PE base relocations so loader fixups are visible evidence rather than unexplained byte changes;
 9. attach analyst-owned aliases/comments;

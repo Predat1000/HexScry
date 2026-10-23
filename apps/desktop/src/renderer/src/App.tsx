@@ -385,6 +385,42 @@ export default function App() {
     }
   }
 
+  async function navigateAddress(address: string) {
+    const exactInstruction = await window.axiom.inspectInstruction(address);
+    const resolution = await window.axiom.resolveAddress(address);
+
+    if (resolution.procedure && !resolution.procedure.external) {
+      await selectProcedure(resolution.procedure);
+    } else {
+      setSelectedProcedure(null);
+      setDossier(null);
+      setHexWindow(null);
+      setFunctionBusy(false);
+    }
+
+    setInstruction(exactInstruction);
+    try {
+      setHexWindow(await window.axiom.hexWindow(exactInstruction.address, 256));
+    } catch {
+      setHexWindow(null);
+    }
+    setCodeView("instruction");
+  }
+
+  async function navigateEvidenceAddress(address: string) {
+    if (!report || procedures.length === 0 || navBusy) return;
+    setNavQuery(address);
+    setError(null);
+    setNavBusy(true);
+    try {
+      await navigateAddress(address);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : String(reason));
+    } finally {
+      setNavBusy(false);
+    }
+  }
+
   async function navigateQuery() {
     const query = navQuery.trim();
     if (!query || !report) return;
@@ -393,25 +429,7 @@ export default function App() {
     try {
       const addressLike = /^(?:(?:0[xX])?[0-9a-fA-F]+|(?:[A-Za-z0-9._~-]|%[0-9a-fA-F]{2})+:0[xX][0-9a-fA-F]+)$/u.test(query);
       if (addressLike) {
-        const exactInstruction = await window.axiom.inspectInstruction(query);
-        const resolution = await window.axiom.resolveAddress(query);
-
-        if (resolution.procedure && !resolution.procedure.external) {
-          await selectProcedure(resolution.procedure);
-        } else {
-          setSelectedProcedure(null);
-          setDossier(null);
-          setHexWindow(null);
-          setFunctionBusy(false);
-        }
-
-        setInstruction(exactInstruction);
-        try {
-          setHexWindow(await window.axiom.hexWindow(exactInstruction.address, 256));
-        } catch {
-          setHexWindow(null);
-        }
-        setCodeView("instruction");
+        await navigateAddress(query);
         return;
       }
 
@@ -576,7 +594,7 @@ export default function App() {
               <dt>Architecture</dt><dd>{report.architecture}</dd>
               <dt>Size</dt><dd>{formatBytes(report.fileSize)}</dd>
               <dt>Image base</dt><dd>{report.imageBase}</dd>
-              <dt>Entry RVA</dt><dd>{hex(report.entryPointRva)}</dd>
+              <dt>Entry RVA</dt><dd><button className="evidence-link" onClick={() => void navigateEvidenceAddress(addAddress(report.imageBase, report.entryPointRva))} disabled={procedures.length === 0 || navBusy} title={procedures.length === 0 ? "Run deep analysis before navigating PE evidence." : `Inspect entry point ${addAddress(report.imageBase, report.entryPointRva)}`}>{hex(report.entryPointRva)}</button></dd>
             </dl>
             <div className="hash">
               <span>SHA-256</span>
@@ -704,7 +722,7 @@ export default function App() {
                         {visibleTlsCallbacks.map((entry, index) => (
                           <div className="tls-row" key={`${entry.address}-${index}`}>
                             <code>callback {index}</code>
-                            <code>{entry.address}</code>
+                            <button className="evidence-link tls-address" onClick={() => void navigateEvidenceAddress(entry.address)} disabled={procedures.length === 0 || navBusy || entry.rva === null} title={entry.rva === null ? "Callback address is outside the image RVA range." : procedures.length === 0 ? "Run deep analysis before navigating TLS callbacks." : `Inspect TLS callback ${entry.address}`}>{entry.address}</button>
                             <span>{entry.rva === null ? "outside image RVA" : `RVA ${hex(entry.rva)}`}</span>
                           </div>
                         ))}

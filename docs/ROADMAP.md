@@ -24,6 +24,7 @@ Roadmap items are outcomes, not promises of dates.
 - [x] Function selection + Ghidra pseudocode/assembly dossier
 - [x] Resolved caller/callee navigation inside the live session
 - [x] General navigation by address/function/foundation string
+- [x] Direct deep-navigation from PE entry point and TLS callback evidence
 - [x] Typed incoming/outgoing cross references from the function dossier
 - [x] Arbitrary-address instruction inspection with decoded/non-boundary/data status
 - [x] Hex evidence view comparing original file bytes with Ghidra loaded memory and annotating known relocation coverage
