@@ -152,6 +152,13 @@ dt { color: #727b8a; } dd { margin: 0; text-align: right; font-family: ui-monosp
 .export-row > span:last-child, .debug-row > span:last-child { color: #667082; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; }
 .export-row .forwarder { color: #d1ad7d; }
 .export-row .local-export { color: #6f8f7b; }
+.tls-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 14px; padding: 10px 12px; border-bottom: 1px solid #202630; background: #0f1319; }
+.tls-summary > div { min-width: 0; }
+.tls-summary span { display: block; color: #687180; font-size: 8px; text-transform: uppercase; letter-spacing: .08em; }
+.tls-summary code { display: block; margin-top: 3px; color: #bfc7d3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tls-row { display: grid; grid-template-columns: 90px minmax(150px, 1fr) 130px; gap: 10px; align-items: center; padding: 7px 12px; border-bottom: 1px solid #191d24; }
+.tls-row code { color: #bfc7d3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tls-row span { color: #738096; font-size: 9px; }
 
 .strings-list { overflow: auto; }
 .string-row { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px; padding: 7px 16px; border-bottom: 1px solid #181c23; font-size: 12px; }

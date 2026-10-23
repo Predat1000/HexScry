@@ -15,6 +15,7 @@ Roadmap items are outcomes, not promises of dates.
 - [x] Bounded PE export parsing (named + ordinal-only + forwarders)
 - [x] Bounded PE base-relocation parsing with loader-fixup evidence in Hex view
 - [x] Bounded PE Debug Directory + CodeView RSDS/NB10 PDB identity parsing
+- [x] Bounded PE TLS Directory + callback parsing for pre-entry execution evidence
 - [x] Provider diagnostics that preserve REA evidence and add only evidence-backed setup hints
 - [x] Transactional target refresh + bounded project/PE input + Electron navigation/IPC hardening
 

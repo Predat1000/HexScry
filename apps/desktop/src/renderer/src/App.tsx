@@ -216,7 +216,7 @@ export default function App() {
   const [navQuery, setNavQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
-  const [peSymbolView, setPeSymbolView] = useState<"imports" | "exports" | "relocations" | "debug">("imports");
+  const [peSymbolView, setPeSymbolView] = useState<"imports" | "exports" | "relocations" | "debug" | "tls">("imports");
   const [peSymbolFilter, setPeSymbolFilter] = useState("");
   const [procedures, setProcedures] = useState<ProcedureSummary[]>([]);
   const [procedureFilter, setProcedureFilter] = useState("");
@@ -305,6 +305,17 @@ export default function App() {
           entry.codeView?.signature.toLowerCase().includes(query),
         )
       : report.debug;
+  }, [report, peSymbolFilter]);
+
+  const visibleTlsCallbacks = useMemo(() => {
+    if (!report?.tls) return [];
+    const query = peSymbolFilter.trim().toLowerCase();
+    return query
+      ? report.tls.callbacks.filter((entry) =>
+          entry.address.toLowerCase().includes(query) ||
+          (entry.rva !== null && hex(entry.rva).toLowerCase().includes(query)),
+        )
+      : report.tls.callbacks;
   }, [report, peSymbolFilter]);
 
   const visibleProcedures = useMemo(() => {
@@ -618,13 +629,14 @@ export default function App() {
                       <button className={peSymbolView === "exports" ? "active" : ""} onClick={() => { setPeSymbolView("exports"); setPeSymbolFilter(""); }}>Exports <span>{report.exports.length}</span></button>
                       <button className={peSymbolView === "relocations" ? "active" : ""} onClick={() => { setPeSymbolView("relocations"); setPeSymbolFilter(""); }}>Relocs <span>{report.relocations.length}</span></button>
                       <button className={peSymbolView === "debug" ? "active" : ""} onClick={() => { setPeSymbolView("debug"); setPeSymbolFilter(""); }}>Debug <span>{report.debug.length}</span></button>
+                      <button className={peSymbolView === "tls" ? "active" : ""} onClick={() => { setPeSymbolView("tls"); setPeSymbolFilter(""); }}>TLS <span>{report.tls?.callbacks.length ?? 0}</span></button>
                     </div>
                   </div>
                   <input
                     value={peSymbolFilter}
                     onChange={(event) => setPeSymbolFilter(event.target.value)}
-                    placeholder={peSymbolView === "imports" ? "Filter DLL / API…" : peSymbolView === "exports" ? "Filter export / forwarder…" : peSymbolView === "relocations" ? "Filter RVA / relocation type…" : "Filter PDB / GUID / debug type…"}
-                    disabled={peSymbolView === "imports" ? report.imports.length === 0 : peSymbolView === "exports" ? report.exports.length === 0 : peSymbolView === "relocations" ? report.relocations.length === 0 : report.debug.length === 0}
+                    placeholder={peSymbolView === "imports" ? "Filter DLL / API…" : peSymbolView === "exports" ? "Filter export / forwarder…" : peSymbolView === "relocations" ? "Filter RVA / relocation type…" : peSymbolView === "debug" ? "Filter PDB / GUID / debug type…" : "Filter TLS callback address / RVA…"}
+                    disabled={peSymbolView === "imports" ? report.imports.length === 0 : peSymbolView === "exports" ? report.exports.length === 0 : peSymbolView === "relocations" ? report.relocations.length === 0 : peSymbolView === "debug" ? report.debug.length === 0 : !report.tls || report.tls.callbacks.length === 0}
                   />
                 </div>
                 <div className="imports-list">
@@ -679,6 +691,27 @@ export default function App() {
                       ))}
                       {visibleDebug.length === 0 && <p className="muted">{report.debug.length === 0 ? "No PE debug-directory entries declared." : "No matching debug entries."}</p>}
                     </>
+                  )}
+                  {peSymbolView === "tls" && (
+                    report.tls ? (
+                      <>
+                        <div className="tls-summary">
+                          <div><span>Callbacks table</span><code>{report.tls.callbacksAddress}</code></div>
+                          <div><span>Index</span><code>{report.tls.indexAddress}</code></div>
+                          <div><span>Raw data</span><code>{report.tls.rawDataStartAddress} → {report.tls.rawDataEndAddress}</code></div>
+                          <div><span>Zero fill / characteristics</span><code>{report.tls.sizeOfZeroFill} B · {hex(report.tls.characteristics)}</code></div>
+                        </div>
+                        {visibleTlsCallbacks.map((entry, index) => (
+                          <div className="tls-row" key={`${entry.address}-${index}`}>
+                            <code>callback {index}</code>
+                            <code>{entry.address}</code>
+                            <span>{entry.rva === null ? "outside image RVA" : `RVA ${hex(entry.rva)}`}</span>
+                          </div>
+                        ))}
+                        {report.tls.callbacks.length === 0 && <p className="muted">TLS directory declared, but no callbacks are listed.</p>}
+                        {report.tls.callbacks.length > 0 && visibleTlsCallbacks.length === 0 && <p className="muted">No matching TLS callbacks.</p>}
+                      </>
+                    ) : <p className="muted">No PE TLS directory declared.</p>
                   )}
                 </div>
               </div>

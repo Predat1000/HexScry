@@ -56,6 +56,21 @@ export interface DebugInfo {
   codeView: CodeViewInfo | null;
 }
 
+export interface TlsCallbackInfo {
+  address: string;
+  rva: number | null;
+}
+
+export interface TlsInfo {
+  rawDataStartAddress: string;
+  rawDataEndAddress: string;
+  indexAddress: string;
+  callbacksAddress: string;
+  sizeOfZeroFill: number;
+  characteristics: number;
+  callbacks: TlsCallbackInfo[];
+}
+
 export interface ProcedureSummary {
   address: string;
   name: string;
@@ -152,6 +167,7 @@ export interface BinaryReport {
   exports: ExportInfo[];
   relocations: RelocationInfo[];
   debug: DebugInfo[];
+  tls: TlsInfo | null;
   strings: ExtractedString[];
   limitations: string[];
 }

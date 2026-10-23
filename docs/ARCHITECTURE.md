@@ -33,7 +33,7 @@ Small typed IPC surface exposed through `contextBridge`. The preload is delibera
 Owns file dialogs, filesystem access, process spawning, provider adapters and application services.
 
 ### Core
-Owns stable domain types and parsers that are genuinely useful for us to implement. The core must not depend on React/Electron. PE base relocations are core evidence: loader-fixup coverage is derived from the file itself and can annotate file-vs-memory differences independently of whichever deep-analysis provider is active. Debug Directory / CodeView identity is also core evidence: PDB path, RSDS/NB10 identity, GUID/age and other debug-directory entry types come directly from bounded PE bytes rather than from Ghidra-specific output.
+Owns stable domain types and parsers that are genuinely useful for us to implement. The core must not depend on React/Electron. PE base relocations are core evidence: loader-fixup coverage is derived from the file itself and can annotate file-vs-memory differences independently of whichever deep-analysis provider is active. Debug Directory / CodeView identity is also core evidence: PDB path, RSDS/NB10 identity, GUID/age and other debug-directory entry types come directly from bounded PE bytes rather than from Ghidra-specific output. TLS Directory metadata and callback VAs are likewise core evidence because callbacks can execute before the ordinary PE entry point; the parser records them independently and deep providers may later corroborate whether each callback resolves to executable code.
 
 ### Providers
 Provider output is normalized into AxiomRE models. UI code must not learn Ghidra/REA-specific response structures.

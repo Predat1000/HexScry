@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
-import type { BinaryReport, CodeViewInfo, DebugInfo, ExportInfo, ExtractedString, ImportInfo, RelocationInfo, SectionInfo } from "./model.js";
+import type { BinaryReport, CodeViewInfo, DebugInfo, ExportInfo, ExtractedString, ImportInfo, RelocationInfo, SectionInfo, TlsInfo } from "./model.js";
 
 const PE_SIGNATURE = 0x00004550;
 const MAX_STRINGS = 500;
@@ -11,6 +11,7 @@ const MAX_EXPORT_SYMBOLS = 4096;
 const MAX_RELOCATION_BLOCKS = 16_384;
 const MAX_RELOCATION_ENTRIES = 262_144;
 const MAX_DEBUG_ENTRIES = 1024;
+const MAX_TLS_CALLBACKS = 4096;
 const MAX_PE_STRING_BYTES = 512;
 const MAX_CODEVIEW_PATH_BYTES = 4096;
 
@@ -664,6 +665,121 @@ function parseDebugDirectory(
   return { debug, limitations };
 }
 
+function readPePointer(buffer: Buffer, offset: number, format: "PE32" | "PE32+", label: string): bigint {
+  const width = format === "PE32+" ? 8 : 4;
+  ensureRange(buffer, offset, width, label);
+  return format === "PE32+" ? buffer.readBigUInt64LE(offset) : BigInt(buffer.readUInt32LE(offset));
+}
+
+function formatPeAddress(address: bigint): string {
+  return `0x${address.toString(16)}`;
+}
+
+function virtualAddressToRva(address: bigint, imageBase: bigint): number | null {
+  if (address < imageBase) return null;
+  const rva = address - imageBase;
+  if (rva > 0xffff_ffffn) return null;
+  return Number(rva);
+}
+
+function parseTlsDirectory(
+  buffer: Buffer,
+  format: "PE32" | "PE32+",
+  optional: number,
+  optionalSize: number,
+  sections: readonly SectionInfo[],
+  sizeOfHeaders: number,
+  imageBase: bigint,
+): { tls: TlsInfo | null; limitations: string[] } {
+  const limitations: string[] = [];
+  const numberOfDirectoriesOffset = format === "PE32+" ? 108 : 92;
+  const dataDirectoryOffset = format === "PE32+" ? 112 : 96;
+  const tlsDirectoryIndex = 9;
+
+  if (optionalSize < numberOfDirectoriesOffset + 4) {
+    return { tls: null, limitations: ["PE optional header does not expose data-directory metadata for TLS."] };
+  }
+  const directoryCount = buffer.readUInt32LE(optional + numberOfDirectoriesOffset);
+  if (directoryCount <= tlsDirectoryIndex) return { tls: null, limitations };
+
+  const directoryRelativeOffset = dataDirectoryOffset + tlsDirectoryIndex * 8;
+  if (optionalSize < directoryRelativeOffset + 8) {
+    return { tls: null, limitations: ["PE optional header truncates the TLS data-directory entry."] };
+  }
+
+  const tlsRva = buffer.readUInt32LE(optional + directoryRelativeOffset);
+  const tlsSize = buffer.readUInt32LE(optional + directoryRelativeOffset + 4);
+  if (tlsRva === 0 || tlsSize === 0) return { tls: null, limitations };
+
+  const pointerSize = format === "PE32+" ? 8 : 4;
+  const structureSize = format === "PE32+" ? 40 : 24;
+  if (tlsSize < structureSize) {
+    return { tls: null, limitations: [`TLS directory size ${tlsSize} is smaller than the ${structureSize}-byte ${format} structure.`] };
+  }
+
+  const tlsOffset = rvaToFileOffset(sections, tlsRva, buffer.length, sizeOfHeaders);
+  if (tlsOffset === null || tlsOffset + structureSize > buffer.length) {
+    return { tls: null, limitations: [`TLS directory RVA 0x${tlsRva.toString(16)} is not fully file-backed.`] };
+  }
+
+  const rawDataStart = readPePointer(buffer, tlsOffset, format, "TLS raw-data start address");
+  const rawDataEnd = readPePointer(buffer, tlsOffset + pointerSize, format, "TLS raw-data end address");
+  const indexAddress = readPePointer(buffer, tlsOffset + pointerSize * 2, format, "TLS index address");
+  const callbacksAddress = readPePointer(buffer, tlsOffset + pointerSize * 3, format, "TLS callbacks address");
+  const scalarOffset = tlsOffset + pointerSize * 4;
+  const sizeOfZeroFill = buffer.readUInt32LE(scalarOffset);
+  const characteristics = buffer.readUInt32LE(scalarOffset + 4);
+  const callbacks: TlsInfo["callbacks"] = [];
+
+  if (callbacksAddress !== 0n) {
+    const callbacksRva = virtualAddressToRva(callbacksAddress, imageBase);
+    if (callbacksRva === null) {
+      limitations.push(`TLS callback table address ${formatPeAddress(callbacksAddress)} is outside the image-base RVA range.`);
+    } else {
+      let terminated = false;
+      for (let index = 0; index < MAX_TLS_CALLBACKS; index += 1) {
+        const pointerRva = callbacksRva + index * pointerSize;
+        if (!Number.isSafeInteger(pointerRva) || pointerRva > 0xffff_ffff) {
+          limitations.push("TLS callback table address exceeds the PE32 RVA range.");
+          break;
+        }
+        const pointerOffset = rvaToFileOffset(sections, pointerRva, buffer.length, sizeOfHeaders);
+        if (pointerOffset === null || pointerOffset + pointerSize > buffer.length) {
+          limitations.push(`TLS callback table is truncated or not file-backed at RVA 0x${pointerRva.toString(16)}.`);
+          break;
+        }
+
+        const callbackAddress = readPePointer(buffer, pointerOffset, format, `TLS callback ${index}`);
+        if (callbackAddress === 0n) {
+          terminated = true;
+          break;
+        }
+        const callbackRva = virtualAddressToRva(callbackAddress, imageBase);
+        if (callbackRva === null) {
+          limitations.push(`TLS callback ${formatPeAddress(callbackAddress)} is outside the image-base RVA range.`);
+        }
+        callbacks.push({ address: formatPeAddress(callbackAddress), rva: callbackRva });
+      }
+      if (!terminated && callbacks.length >= MAX_TLS_CALLBACKS) {
+        limitations.push(`TLS callback scan is intentionally capped at ${MAX_TLS_CALLBACKS} entries.`);
+      }
+    }
+  }
+
+  return {
+    tls: {
+      rawDataStartAddress: formatPeAddress(rawDataStart),
+      rawDataEndAddress: formatPeAddress(rawDataEnd),
+      indexAddress: formatPeAddress(indexAddress),
+      callbacksAddress: formatPeAddress(callbacksAddress),
+      sizeOfZeroFill,
+      characteristics,
+      callbacks,
+    },
+    limitations,
+  };
+}
+
 export function extractAsciiStrings(
   buffer: Buffer,
   minLength = MIN_STRING_LENGTH,
@@ -722,10 +838,10 @@ export function parsePortableExecutable(path: string, buffer: Buffer): BinaryRep
   if (optionalSize < 64) throw new Error("Invalid or truncated PE optional header.");
   ensureRange(buffer, optional, 64, "PE entry point/image base/header size");
   const entryPointRva = buffer.readUInt32LE(optional + 16);
-  const imageBase =
-    format === "PE32+"
-      ? `0x${buffer.readBigUInt64LE(optional + 24).toString(16)}`
-      : `0x${buffer.readUInt32LE(optional + 28).toString(16)}`;
+  const imageBaseValue = format === "PE32+"
+    ? buffer.readBigUInt64LE(optional + 24)
+    : BigInt(buffer.readUInt32LE(optional + 28));
+  const imageBase = `0x${imageBaseValue.toString(16)}`;
   const sizeOfHeaders = buffer.readUInt32LE(optional + 60);
 
   const sectionTable = optional + optionalSize;
@@ -747,12 +863,14 @@ export function parsePortableExecutable(path: string, buffer: Buffer): BinaryRep
   const exportResult = parseExports(buffer, format, optional, optionalSize, sections, sizeOfHeaders);
   const relocationResult = parseRelocations(buffer, format, optional, optionalSize, sections, sizeOfHeaders);
   const debugResult = parseDebugDirectory(buffer, format, optional, optionalSize, sections, sizeOfHeaders);
+  const tlsResult = parseTlsDirectory(buffer, format, optional, optionalSize, sections, sizeOfHeaders, imageBaseValue);
   const strings = extractAsciiStrings(buffer);
   const limitations: string[] = [
     ...importResult.limitations,
     ...exportResult.limitations,
     ...relocationResult.limitations,
     ...debugResult.limitations,
+    ...tlsResult.limitations,
     "This foundation parser does not yet resolve full debug symbols, functions or cross-references.",
   ];
   if (strings.length >= MAX_STRINGS) {
@@ -775,6 +893,7 @@ export function parsePortableExecutable(path: string, buffer: Buffer): BinaryRep
     exports: exportResult.exports,
     relocations: relocationResult.relocations,
     debug: debugResult.debug,
+    tls: tlsResult.tls,
     strings,
     limitations,
   };
