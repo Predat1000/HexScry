@@ -1,8 +1,6 @@
-import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
 import { readFile, stat, writeFile } from "node:fs/promises";
-import { promisify } from "node:util";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { app, BrowserWindow, dialog, ipcMain } from "electron";
 import { electronApp, optimizer } from "@electron-toolkit/utils";
 import {
@@ -20,9 +18,7 @@ import {
   type ProcedureResolution,
   type ProcedureSummary,
 } from "@axiomre/core";
-import { defaultReaEntrypoint, ReaMcpSession, reaNodeEnvironment, resolveReaEnvironment } from "@axiomre/provider-rea";
-
-const execFileAsync = promisify(execFile);
+import { defaultReaEntrypoint, ReaMcpSession, resolveReaEnvironment } from "@axiomre/provider-rea";
 
 let currentBinaryPath: string | null = null;
 let currentBinaryReport: BinaryReport | null = null;
@@ -105,21 +101,27 @@ async function probeToolchain(): Promise<ToolStatus> {
   const ghidraPath = environment.GHIDRA_INSTALL_DIR;
   const jadxPath = environment.REA_JADX_MCP_JAR;
 
+  let reaAvailable = false;
   let reaVersion: string | undefined;
   try {
     const reaEntrypoint = defaultReaEntrypoint(environment);
-    const { stdout } = await execFileAsync(process.execPath, [reaEntrypoint, "--version"], {
-      env: reaNodeEnvironment(environment),
-      windowsHide: true,
-      timeout: 10_000,
-    });
-    reaVersion = stdout.trim() || "installed";
+    reaAvailable = existsSync(reaEntrypoint);
+    if (reaAvailable) {
+      try {
+        const packageJson = JSON.parse(await readFile(join(dirname(dirname(reaEntrypoint)), "package.json"), "utf8")) as { version?: unknown };
+        if (typeof packageJson.version === "string" && packageJson.version.trim()) {
+          reaVersion = packageJson.version.trim();
+        }
+      } catch {
+        // The executable entrypoint is sufficient to report installation; version is optional metadata.
+      }
+    }
   } catch {
     // Status remains unavailable; UI can still analyze with owned parsers.
   }
 
   return {
-    rea: { available: Boolean(reaVersion), ...(reaVersion ? { version: reaVersion } : {}) },
+    rea: { available: reaAvailable, ...(reaVersion ? { version: reaVersion } : {}) },
     ghidra: {
       available: Boolean(ghidraPath && existsSync(ghidraPath)),
       ...(ghidraPath ? { path: ghidraPath } : {}),
@@ -148,6 +150,10 @@ async function captureDemoWhenReady(mainWindow: BrowserWindow): Promise<void> {
       break;
     }
     if (state.hasEntry && !state.analyzing) {
+      // Documentation captures should be stable across development machines and remote
+      // desktop resolutions. This resize is only active when AXIOMRE_DEMO_CAPTURE is set.
+      mainWindow.setContentSize(1424, 836, false);
+      await new Promise((resolveDelay) => setTimeout(resolveDelay, 250));
       const image = await mainWindow.webContents.capturePage();
       await writeFile(capturePath, image.toPNG());
       console.log(`[demo-capture] ${capturePath}`);
