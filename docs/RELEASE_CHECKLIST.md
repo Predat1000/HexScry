@@ -26,6 +26,7 @@ This checklist is intentionally conservative. HexScry should be public when the 
 - [x] Windows unpacked package deep-smokes against the project-owned PE fixture.
 - [x] Windows portable self-extracting artifact deep-smokes against the same fixture.
 - [x] Release audit confirms bundled/external dependency policy.
+- [ ] From the candidate lockfile, run `npm ci` and `npm audit --omit=dev --audit-level=high`. Resolve high/critical runtime findings before distribution. Record outstanding moderate advisories, whether the affected versions are bundled, and how the desktop invokes them. Verify dependency fixes with the packaged deep smoke.
 - [ ] Bump all npm workspaces to `0.1.0-alpha.1` only after the launch gate is green.
 - [ ] Build `HexScry 0.1.0-alpha.1.exe` from the final tagged source following `docs/RELEASE_PROCESS.md`.
 - [ ] Record final artifact size and SHA-256 in release notes.
