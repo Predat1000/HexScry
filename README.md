@@ -55,6 +55,10 @@ npm run dev
 
 Node.js 24 is the supported development line (`.nvmrc` / `.node-version`). `npm run doctor` checks the required workspace/tooling state and reports optional deep-analysis dependencies separately, so a missing Ghidra/JDK setup is not confused with a broken core checkout.
 
+### Running the desktop on Ubuntu 24.04
+
+`npm run check` works headlessly. The desktop needs a display and the native Electron libraries. If Electron aborts before the window opens with “The SUID sandbox helper binary was found, but is not configured correctly”, check the kernel journal for an AppArmor denial involving `unprivileged_userns`. On our Ubuntu 24.04 test VM, a path-specific AppArmor profile granting `userns` to an administrator-owned Electron executable allowed the workbench to run with Chromium sandboxing enabled. An administrator can follow the Ubuntu guidance for that specific runtime and set `ELECTRON_OVERRIDE_DIST_PATH` to its distribution directory; use the Electron version from the lockfile. [Ubuntu 24.04 release notes](https://documentation.ubuntu.com/release-notes/24.04/)
+
 ### Reproducible demo
 
 ```text

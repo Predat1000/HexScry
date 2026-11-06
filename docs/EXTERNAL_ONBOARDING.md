@@ -4,7 +4,7 @@ Use this once the repository can be shared. The goal is to test the public proje
 
 ## Rules for the validation
 
-The participant should receive only the repository URL and this file. Do not give them `WORK_HANDOFF.md`, NUC paths, private chat history or step-by-step coaching unless they are blocked and the block itself is recorded as an onboarding defect.
+Give the participant the repository URL (or the private Git bundle) and this file. A bundle can be cloned with `git clone HexScry.bundle HexScry`. Do not give them `WORK_HANDOFF.md`, NUC paths, private chat history or step-by-step coaching unless they are blocked and the block itself is recorded as an onboarding defect.
 
 ## Baseline path
 
@@ -22,8 +22,8 @@ npm run check
 5. Start the desktop app with `npm run dev`.
 6. Open the project-owned fixture through `npm run demo` or the file picker.
 7. If they already have a compatible JDK + Ghidra, optionally run `npm run smoke:rea` or `npm run demo:deep`. Deep analysis is not required to validate core onboarding.
-8. Pick one current `good first issue` and produce a focused change with tests/verification as appropriate.
-9. Prepare a pull request using the public template.
+8. Pick a current `good first issue`, or use `docs/CONTRIBUTOR_BACKLOG.md` for an offline pilot. Make a focused change or review one proposed change with concrete findings.
+9. For a hosted change, prepare a pull request using the repository template. For an offline pilot, retain the local commit or review notes for the maintainer.
 
 ## What to record
 
