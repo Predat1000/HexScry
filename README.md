@@ -78,7 +78,7 @@ After the development checks above, run `npm run demo`. The sample is a small ex
 1. In **Sections**, find `.text` at RVA `0x1000`. Search the strings for `deterministic` to find the embedded fixture marker. Both steps work with the built-in parser.
 2. If Ghidra and a compatible JDK are installed, click **Analyze with Ghidra**, then click the **Entry RVA** in the sidebar. **Instruction** shows the decoded instruction. In **Hex**, the first three file bytes are `31 C0 C3`. In **Assembly**, those bytes correspond to XOR EAX,EAX followed by RET.
 3. Enter `0x140001001` in the navigation box. It points at the second byte of XOR. Compare the instruction status with the status at `0x140001000` to see how HexScry distinguishes a byte address from an instruction boundary.
-4. Select `entry`, give it an alias, add a comment and save the project. Reopen it with the same sample available at its original path and run deep analysis again to recover your annotated function.
+4. Select `entry`, give it an alias, add a comment and save the project. Reopen it, select the original binary if prompted (its SHA-256 must match), and run deep analysis again to recover your annotated function.
 
 ### Release verification (Windows)
 

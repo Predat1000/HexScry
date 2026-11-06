@@ -296,7 +296,18 @@ app.whenReady().then(async () => {
     if (selected.canceled || !selected.filePaths[0]) return null;
 
     const project = parseProject(await readProjectText(selected.filePaths[0]));
-    const report = await inspectBinary(project.target.path);
+    // A project may come from someone else. Only read a path the analyst has
+    // already opened in this session or explicitly chooses in the file picker.
+    let target = currentBinaryPath;
+    if (!target || target !== project.target.path) {
+      const binary = await dialog.showOpenDialog({
+        title: "Select the original binary for this project (SHA-256 verified)",
+        properties: ["openFile"],
+      });
+      if (binary.canceled || !binary.filePaths[0]) return null;
+      target = binary.filePaths[0];
+    }
+    const report = await inspectBinary(target);
     verifyProjectTarget(project, report);
 
     deepAnalysisController?.abort(new Error("Project changed."));
