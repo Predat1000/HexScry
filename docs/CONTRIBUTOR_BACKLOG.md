@@ -19,15 +19,14 @@ Acceptance:
 
 Suggested labels: `good first issue`, `core`, `PE`, `UI`.
 
-## Good first issue — client-side filter for PE evidence tables
+## Good first issue — show match counts for PE evidence filters
 
-**Goal:** make Imports, Exports and Strings easier to inspect without triggering provider calls.
+**Goal:** show how many rows match the existing Imports and Exports filters.
 
 Scope:
-- one small filter input reused by the active evidence tab;
-- case-insensitive substring matching;
-- filtering stays entirely in the renderer over already-loaded bounded data;
-- show visible/total counts.
+- reuse the existing case-insensitive filter and its filtered arrays in the renderer;
+- report visible/total counts while a filter is active, including zero matches;
+- keep the original total when the filter is cleared.
 
 Acceptance:
 - no REA/Ghidra calls are added;

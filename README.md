@@ -2,7 +2,7 @@
 
 > **Pre-alpha / local development.** The project is not ready for public promotion yet.
 
-HexScry is an open-source reverse-engineering workbench designed around three ideas:
+HexScry is a desktop workbench for inspecting Windows executables. Use it to check what a file contains, compare its bytes with Ghidra’s loaded memory and keep notes on the functions you investigate. The project has three engineering principles:
 
 1. **Evidence first.** Conclusions should link back to bytes, instructions, references, symbols, strings, control flow, or provider evidence.
 2. **Modular engines.** Do not rebuild mature decompilers for vanity. Integrate strong open tooling where that is the reasonable engineering choice, while keeping our own data model and workflows vendor-independent.
@@ -66,6 +66,15 @@ npm run demo:capture  # deep demo, capture the stable renderer, then exit
 `demo:capture` writes `docs/assets/hexscry-v0.1-demo.png` only after deep analysis has completed and the recovered `entry` procedure is visible. The fixture is generated entirely from project-owned code. Deep demo/capture requires a compatible JDK and Ghidra; these tools are detected rather than silently downloaded.
 
 For a dependency-clean verification equivalent to the CI entry path, run `npm run verify:checkout`. `npm install`/`npm ci` bring the supported REA version. Native Ghidra analysis additionally requires a compatible JDK and `GHIDRA_INSTALL_DIR`; the desktop reports whether those external tools are available instead of silently downloading them.
+
+### Try one investigation
+
+After the development checks above, run `npm run demo`. The sample is a small executable generated from source in this repository.
+
+1. In **Sections**, find `.text` at RVA `0x1000`. Search the strings for `deterministic` to find the embedded fixture marker. Both steps work with the built-in parser.
+2. If Ghidra and a compatible JDK are installed, click **Analyze with Ghidra**, then click the **Entry RVA** in the sidebar. **Instruction** shows the decoded instruction. In **Hex**, the first three file bytes are `31 C0 C3`. In **Assembly**, those bytes correspond to XOR EAX,EAX followed by RET.
+3. Enter `0x140001001` in the navigation box. It points at the second byte of XOR. Compare the instruction status with the status at `0x140001000` to see how HexScry distinguishes a byte address from an instruction boundary.
+4. Select `entry`, give it an alias, add a comment and save the project. Reopen it with the same sample available at its original path and run deep analysis again to recover your annotated function.
 
 ### Release verification (Windows)
 

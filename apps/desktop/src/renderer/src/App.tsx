@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { AnalystAnnotations, BinaryReport, FunctionDossier, InstructionInspection, ProcedureSummary, ReferenceEdge } from "@hexscry/core";
 import type { HexWindowResult, ToolStatus } from "../../preload/index";
 
@@ -220,6 +220,8 @@ export default function App() {
   const [peSymbolFilter, setPeSymbolFilter] = useState("");
   const [procedures, setProcedures] = useState<ProcedureSummary[]>([]);
   const [procedureFilter, setProcedureFilter] = useState("");
+  const selectionRequest = useRef(0);
+  const inventoryRequest = useRef(0);
   const [deepBusy, setDeepBusy] = useState(false);
   const [deepError, setDeepError] = useState<string | null>(null);
   const [selectedProcedure, setSelectedProcedure] = useState<string | null>(null);
@@ -335,6 +337,10 @@ export default function App() {
     restoredProcedure: string | null = null,
     restoredAnnotations: AnalystAnnotations = { aliases: {}, comments: {} },
   ) {
+    ++inventoryRequest.current;
+    ++selectionRequest.current;
+    setNavBusy(false);
+    setDeepBusy(false);
     setReport(next);
     setAnnotations(restoredAnnotations);
     setNavQuery("");
@@ -387,12 +393,14 @@ export default function App() {
     }
   }
 
-  async function navigateAddress(address: string) {
+  async function navigateAddress(address: string, request: number) {
     const exactInstruction = await window.hexscry.inspectInstruction(address);
+    if (request !== selectionRequest.current) return;
     const resolution = await window.hexscry.resolveAddress(address);
 
+    if (request !== selectionRequest.current) return;
     if (resolution.procedure && !resolution.procedure.external) {
-      await selectProcedure(resolution.procedure);
+      await selectProcedure(resolution.procedure, request);
     } else {
       setSelectedProcedure(null);
       setDossier(null);
@@ -400,10 +408,14 @@ export default function App() {
       setFunctionBusy(false);
     }
 
+    if (request !== selectionRequest.current) return;
     setInstruction(exactInstruction);
     try {
-      setHexWindow(await window.hexscry.hexWindow(exactInstruction.address, 256));
+      const bytes = await window.hexscry.hexWindow(exactInstruction.address, 256);
+      if (request !== selectionRequest.current) return;
+      setHexWindow(bytes);
     } catch {
+      if (request !== selectionRequest.current) return;
       setHexWindow(null);
     }
     setCodeView("instruction");
@@ -413,13 +425,15 @@ export default function App() {
     if (!report || procedures.length === 0 || navBusy) return;
     setNavQuery(address);
     setError(null);
+    const request = ++selectionRequest.current;
+    setFunctionBusy(false);
     setNavBusy(true);
     try {
-      await navigateAddress(address);
+      await navigateAddress(address, request);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      if (request === selectionRequest.current) setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
-      setNavBusy(false);
+      if (request === selectionRequest.current) setNavBusy(false);
     }
   }
 
@@ -427,6 +441,8 @@ export default function App() {
     const query = navQuery.trim();
     if (!query || !report) return;
     setError(null);
+    const request = ++selectionRequest.current;
+    setFunctionBusy(false);
     setNavBusy(true);
     try {
       const lowered = query.toLowerCase();
@@ -435,19 +451,19 @@ export default function App() {
         ?? local.find((item) => annotations.aliases[item.address]?.toLowerCase() === lowered);
       const explicitAddress = /^(?:0x|.*:0x)/iu.test(query);
       if (exact && !explicitAddress) {
-        await selectProcedure(exact);
+        await selectProcedure(exact, request);
         return;
       }
       const addressLike = /^(?:(?:0[xX])?[0-9a-fA-F]+|(?:[A-Za-z0-9._~-]|%[0-9a-fA-F]{2})+:0[xX][0-9a-fA-F]+)$/u.test(query);
       if (addressLike) {
-        await navigateAddress(query);
+        await navigateAddress(query, request);
         return;
       }
 
       const procedure = local.find((item) => item.name.toLowerCase().includes(lowered) ||
         annotations.aliases[item.address]?.toLowerCase().includes(lowered));
       if (procedure) {
-        await selectProcedure(procedure);
+        await selectProcedure(procedure, request);
         return;
       }
 
@@ -473,17 +489,19 @@ export default function App() {
       }
       throw new Error(`No local procedure, PE import/export or foundation string matches “${query}”.`);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : String(reason));
+      if (request === selectionRequest.current) setError(reason instanceof Error ? reason.message : String(reason));
     } finally {
-      setNavBusy(false);
+      if (request === selectionRequest.current) setNavBusy(false);
     }
   }
 
   async function deepAnalyze(autoSelectFirst = false) {
+    const request = ++inventoryRequest.current;
     setDeepBusy(true);
     setDeepError(null);
     try {
       const nextProcedures = await window.hexscry.deepProcedures();
+      if (request !== inventoryRequest.current) return;
       setProcedures(nextProcedures);
       const restored = selectedProcedure
         ? nextProcedures.find((procedure) => procedure.address === selectedProcedure && !procedure.external)
@@ -493,16 +511,21 @@ export default function App() {
       if (restored) await selectProcedure(restored);
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : String(reason);
-      if (!/cancel|aborted/i.test(message)) setDeepError(message);
+      if (request === inventoryRequest.current && !/cancel|aborted/i.test(message)) setDeepError(message);
     } finally {
-      setDeepBusy(false);
+      if (request === inventoryRequest.current) setDeepBusy(false);
     }
   }
 
   async function cancelDeepAnalysis() {
-    await window.hexscry.cancelDeepAnalysis();
-    setDeepBusy(false);
-    setFunctionBusy(false);
+    const request = ++inventoryRequest.current;
+    try {
+      await window.hexscry.cancelDeepAnalysis();
+    } catch (reason) {
+      if (request === inventoryRequest.current) setDeepError(String(reason));
+    } finally {
+      if (request === inventoryRequest.current) setDeepBusy(false);
+    }
   }
 
   function updateAnnotation(kind: "aliases" | "comments", address: string, value: string) {
@@ -516,8 +539,10 @@ export default function App() {
     });
   }
 
-  async function selectProcedure(procedure: ProcedureSummary) {
+  async function selectProcedure(procedure: ProcedureSummary, existingRequest?: number) {
     if (procedure.external) return;
+    if (existingRequest === undefined) setNavBusy(false);
+    const request = existingRequest ?? ++selectionRequest.current;
     setSelectedProcedure(procedure.address);
     setFunctionBusy(true);
     setDeepError(null);
@@ -526,18 +551,22 @@ export default function App() {
     setHexWindow(null);
     try {
       const nextDossier = await window.hexscry.analyzeFunction(procedure.address);
+      if (request !== selectionRequest.current) return;
       setDossier(nextDossier);
       try {
-        setHexWindow(await window.hexscry.hexWindow(procedure.address, 256));
+        const bytes = await window.hexscry.hexWindow(procedure.address, 256);
+        if (request !== selectionRequest.current) return;
+        setHexWindow(bytes);
       } catch {
+        if (request !== selectionRequest.current) return;
         setHexWindow(null);
       }
       setCodeView("pseudocode");
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : String(reason);
-      if (!/cancel|aborted|superseded/i.test(message)) setDeepError(message);
+      if (request === selectionRequest.current && !/cancel|aborted|superseded/i.test(message)) setDeepError(message);
     } finally {
-      setFunctionBusy(false);
+      if (request === selectionRequest.current) setFunctionBusy(false);
     }
   }
 

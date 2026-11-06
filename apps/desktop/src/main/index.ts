@@ -22,7 +22,7 @@ import { defaultReaEntrypoint, ReaMcpSession, resolveReaEnvironment } from "@hex
 
 let currentBinaryPath: string | null = null;
 let currentBinaryReport: BinaryReport | null = null;
-let reaSession: ReaMcpSession | null = null;
+let reaSession: Promise<ReaMcpSession> | null = null;
 let deepAnalysisController: AbortController | null = null;
 let bootstrapError: string | null = null;
 const demoAutoDeep = process.env.HEXSCRY_DEMO_DEEP === "1";
@@ -72,11 +72,28 @@ async function readProjectText(path: string): Promise<string> {
   return readFile(path, "utf8");
 }
 
-async function getReaSession(): Promise<ReaMcpSession> {
+function getReaSession(target: string): Promise<ReaMcpSession> {
+  if (target !== currentBinaryPath) throw new Error("Target changed.");
   if (reaSession) return reaSession;
+  const pending = (async () => {
+    const session = new ReaMcpSession({ environment: await resolveReaEnvironment(process.env) });
+    try {
+      await session.openBinary(target);
+      return session;
+    } catch (error) {
+      await session.close();
+      throw error;
+    }
+  })();
+  reaSession = pending;
+  void pending.catch(() => { if (reaSession === pending) reaSession = null; });
+  return pending;
+}
 
-  reaSession = new ReaMcpSession({ environment: await resolveReaEnvironment(process.env) });
-  return reaSession;
+function retireSession(): void {
+  const previous = reaSession;
+  reaSession = null;
+  if (previous) void previous.then((session) => session.close(), () => {}).catch((error) => console.error("REA session cleanup failed", error));
 }
 
 async function loadDemoTargetFromEnvironment(): Promise<void> {
@@ -142,7 +159,7 @@ async function captureDemoWhenReady(mainWindow: BrowserWindow): Promise<void> {
   while (!mainWindow.isDestroyed() && Date.now() < deadline) {
     await new Promise((resolveDelay) => setTimeout(resolveDelay, 1_000));
     const rawState = await mainWindow.webContents.executeJavaScript(
-      `JSON.stringify({hasEntry: document.body.innerText.includes('entry'), analyzing: document.body.innerText.includes('Analyzing with Ghidra'), deepError: document.body.innerText.includes('Deep analysis:')})`,
+      `JSON.stringify({hasEntry: document.querySelector('.procedure-row.selected .procedure-name')?.textContent === 'entry' && document.querySelector('.function-heading h3')?.textContent === 'entry' && Boolean(document.querySelector('.function-body pre')?.textContent?.trim()), analyzing: document.body.innerText.includes('Analyzing with Ghidra'), deepError: document.body.innerText.includes('Deep analysis:')})`,
     );
     const state = JSON.parse(rawState) as { hasEntry: boolean; analyzing: boolean; deepError: boolean };
     if (state.deepError) {
@@ -251,10 +268,7 @@ app.whenReady().then(async () => {
     deepAnalysisController = null;
     // An explicit open is also a refresh. Close even when the path is identical so a
     // binary replaced in-place cannot inherit a stale provider analysis session.
-    if (reaSession) {
-      await reaSession.close();
-      reaSession = null;
-    }
+    retireSession();
     currentBinaryPath = nextPath;
     currentBinaryReport = nextReport;
     return nextReport;
@@ -289,10 +303,7 @@ app.whenReady().then(async () => {
     deepAnalysisController = null;
     // Opening a project is an explicit target refresh too. Even an identical path may
     // have been replaced since the current provider session imported it.
-    if (reaSession) {
-      await reaSession.close();
-      reaSession = null;
-    }
+    retireSession();
     currentBinaryPath = report.path;
     currentBinaryReport = report;
     return {
@@ -311,8 +322,7 @@ app.whenReady().then(async () => {
     const target = currentBinaryPath;
 
     try {
-      const session = await getReaSession();
-      await session.openBinary(target);
+      const session = await getReaSession(target);
       const procedures = await session.listProcedures(controller.signal);
       if (currentBinaryPath !== target) throw new Error("Target changed during deep analysis.");
       return procedures;
@@ -331,8 +341,7 @@ app.whenReady().then(async () => {
     const target = currentBinaryPath;
 
     try {
-      const session = await getReaSession();
-      await session.openBinary(target);
+      const session = await getReaSession(target);
       const dossier = await session.analyzeFunction(procedureId, controller.signal);
       if (currentBinaryPath !== target) throw new Error("Target changed during function analysis.");
       return dossier;
@@ -345,8 +354,7 @@ app.whenReady().then(async () => {
     if (!currentBinaryPath) throw new Error("Open a binary before inspecting an instruction.");
     const inspectedAddress = requireIpcString(address, "Instruction address", 256);
     const target = currentBinaryPath;
-    const session = await getReaSession();
-    await session.openBinary(target);
+    const session = await getReaSession(target);
     const inspection = await session.inspectInstruction(inspectedAddress);
     if (currentBinaryPath !== target) throw new Error("Target changed during instruction inspection.");
     return inspection;
@@ -356,8 +364,7 @@ app.whenReady().then(async () => {
     if (!currentBinaryPath) throw new Error("Open a binary before resolving an address.");
     const resolvedAddress = requireIpcString(address, "Address", 256);
     const target = currentBinaryPath;
-    const session = await getReaSession();
-    await session.openBinary(target);
+    const session = await getReaSession(target);
     const resolution = await session.resolveContainingProcedure(resolvedAddress);
     if (currentBinaryPath !== target) throw new Error("Target changed during address resolution.");
     return resolution;
@@ -370,23 +377,24 @@ app.whenReady().then(async () => {
     const target = currentBinaryPath;
     const report = currentBinaryReport;
     const file = await readBinaryWindowAtAddress(report, byteAddress, byteLength);
+    if (currentBinaryReport !== report) throw new Error("Target changed during byte read.");
 
     let memory: MemoryByteWindow | null = null;
     let memoryError: string | null = null;
     try {
-      const session = await getReaSession();
-      await session.openBinary(target);
+      const session = await getReaSession(target);
       memory = await session.readBytes(byteAddress, byteLength);
     } catch (reason) {
       memoryError = reason instanceof Error ? reason.message : String(reason);
     }
 
-    if (currentBinaryPath !== target) throw new Error("Target changed during byte read.");
+    if (currentBinaryReport !== report) throw new Error("Target changed during byte read.");
     return { address: byteAddress, file, memory, memoryError };
   });
 
   ipcMain.handle("analysis:cancel-deep", () => {
     deepAnalysisController?.abort(new Error("Cancelled by user."));
+    retireSession();
     deepAnalysisController = null;
     return true;
   });
@@ -403,7 +411,7 @@ app.whenReady().then(async () => {
 app.on("before-quit", () => {
   deepAnalysisController?.abort(new Error("Application is closing."));
   deepAnalysisController = null;
-  void reaSession?.close();
+  retireSession();
 });
 
 app.on("window-all-closed", () => {
