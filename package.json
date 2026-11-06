@@ -42,5 +42,10 @@
   },
   "devDependencies": {
     "electron-builder": "^26.15.3"
+  },
+  "overrides": {
+    "rea-agents": {
+      "zod": "4.6.7"
+    }
   }
 }
