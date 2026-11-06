@@ -48,9 +48,12 @@ try {
   child.stdout.on("data", (chunk) => { stdout = appendBounded(stdout, chunk.toString()); });
   child.stderr.on("data", (chunk) => { stderr = appendBounded(stderr, chunk.toString()); });
 
-  const timeoutMs = 180_000;
+  // The portable wrapper must extract the application before Electron starts the demo.
+  const timeoutMs = basename(executable).toLowerCase() === "hexscry.exe" ? 180_000 : 420_000;
   exitCode = await new Promise((resolveExit, rejectExit) => {
     const timer = setTimeout(() => {
+      // Stop the wrapper and its descendants while the parent PID is still valid.
+      if (child.pid) spawnSync("taskkill", ["/F", "/T", "/PID", String(child.pid)], { windowsHide: true, stdio: "ignore" });
       child.kill("SIGKILL");
       rejectExit(new Error(`Packaged desktop smoke exceeded ${timeoutMs / 1000}s.`));
     }, timeoutMs);
