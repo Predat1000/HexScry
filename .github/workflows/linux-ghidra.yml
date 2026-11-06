@@ -1,0 +1,60 @@
+name: Linux Ghidra smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/linux-ghidra.yml
+
+permissions:
+  contents: read
+
+jobs:
+  deep-analysis:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install the verified Ghidra distribution
+        shell: bash
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --location --retry 3 --silent --show-error -o ghidra.zip https://github.com/NationalSecurityAgency/ghidra/releases/download/Ghidra_12.1.4_build/ghidra_12.1.4_PUBLIC_20260921.zip
+          echo "ddac49f903da9d5bac833e5cc79395098b9c33cfd3279be5f31bd00387d2d4db  ghidra.zip" | sha256sum -c -
+          unzip -q ghidra.zip
+          echo "GHIDRA_INSTALL_DIR=$RUNNER_TEMP/ghidra_12.1.4_PUBLIC" >> "$GITHUB_ENV"
+      - name: Run the real provider against the project-owned PE
+        run: |
+          npm ci
+          npm run fixtures:generate
+          npm run smoke:rea
+      - name: Verify the sandboxed Electron workbench
+        shell: bash
+        run: |
+          npm run install:electron
+          npm run build
+          runtime=/opt/hexscry-ci-electron
+          sudo cp -r node_modules/electron/dist "$runtime"
+          printf 'abi <abi/4.0>,\ninclude <tunables/global>\nprofile hexscry-ci-electron /opt/hexscry-ci-electron/electron flags=(unconfined) {\n userns,\n}\n' > "$RUNNER_TEMP/hexscry.apparmor"
+          sudo apparmor_parser -r "$RUNNER_TEMP/hexscry.apparmor"
+          trap 'sudo apparmor_parser -R "$RUNNER_TEMP/hexscry.apparmor"' EXIT
+          export HEXSCRY_DEMO_TARGET="$PWD/fixtures/pe/minimal-x64.exe"
+          export HEXSCRY_DEMO_DEEP=1 HEXSCRY_DEMO_EXIT_AFTER_CAPTURE=1
+          export HEXSCRY_DEMO_CAPTURE="$RUNNER_TEMP/linux-ghidra.png"
+          timeout 5m xvfb-run -a "$runtime/electron" apps/desktop
+          test -s "$HEXSCRY_DEMO_CAPTURE"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-ghidra-evidence
+          path: ${{ runner.temp }}/linux-ghidra.png
+          if-no-files-found: error
