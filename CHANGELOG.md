@@ -2,7 +2,7 @@
 
 All notable public changes to HexScry will be documented here. The project follows Semantic Versioning once public prereleases begin.
 
-## Unreleased
+## 0.1.0-alpha.1
 
 ### Added
 - evidence-first Windows PE workbench with bounded project-owned parsing;

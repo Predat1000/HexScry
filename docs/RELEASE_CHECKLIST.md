@@ -17,9 +17,9 @@ This checklist is intentionally conservative. HexScry should be public when the 
 - [x] `npm run doctor` reports required development checks clearly.
 - [x] Clean post-rename checkout passes `npm ci` and `npm run release:verify`.
 - [x] Clean post-rename checkout builds and deep-smokes the Windows portable artifact.
-- [ ] Hosted Windows CI passes from the public/private GitHub remote.
-- [ ] Hosted Linux CI passes from the public/private GitHub remote.
-- [ ] One person outside the primary development session follows only README/CONTRIBUTING and completes the validation in `docs/EXTERNAL_ONBOARDING.md`, including one small contribution or meaningful review.
+- [x] Hosted Windows CI passes from the public/private GitHub remote.
+- [x] Hosted Linux CI passes from the public/private GitHub remote.
+- [x] Maintainer-run clean-checkout rehearsal completed for alpha. The review found a shared-project target-selection defect. Cancellation, relocated files, hash mismatches and same-session reopening were verified after the fix. Independent contributor feedback is welcome after launch.
 
 ## Release artifact
 

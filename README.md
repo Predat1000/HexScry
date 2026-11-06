@@ -1,6 +1,6 @@
 # HexScry
 
-> **Pre-alpha / local development.** The project is not ready for public promotion yet.
+> **Developer alpha for Windows PE inspection.** Start with the reproducible sample below. Ghidra is optional for the built-in parser.
 
 HexScry is a desktop workbench for inspecting Windows executables. Use it to check what a file contains, compare its bytes with Ghidra’s loaded memory and keep notes on the functions you investigate. The project has three engineering principles:
 
