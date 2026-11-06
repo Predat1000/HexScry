@@ -322,11 +322,13 @@ export default function App() {
     const query = procedureFilter.trim().toLowerCase();
     const filtered = query
       ? procedures.filter((procedure) =>
-          procedure.name.toLowerCase().includes(query) || procedure.address.toLowerCase().includes(query),
+          procedure.name.toLowerCase().includes(query) ||
+          annotations.aliases[procedure.address]?.toLowerCase().includes(query) ||
+          procedure.address.toLowerCase().includes(query),
         )
       : procedures;
     return [...filtered].sort((left, right) => Number(Boolean(left.external)) - Number(Boolean(right.external)));
-  }, [procedures, procedureFilter]);
+  }, [procedures, procedureFilter, annotations.aliases]);
 
   function applyReport(
     next: BinaryReport,
@@ -427,15 +429,23 @@ export default function App() {
     setError(null);
     setNavBusy(true);
     try {
+      const lowered = query.toLowerCase();
+      const local = procedures.filter((item) => !item.external);
+      const exact = local.find((item) => item.name.toLowerCase() === lowered)
+        ?? local.find((item) => annotations.aliases[item.address]?.toLowerCase() === lowered);
+      const explicitAddress = /^(?:0x|.*:0x)/iu.test(query);
+      if (exact && !explicitAddress) {
+        await selectProcedure(exact);
+        return;
+      }
       const addressLike = /^(?:(?:0[xX])?[0-9a-fA-F]+|(?:[A-Za-z0-9._~-]|%[0-9a-fA-F]{2})+:0[xX][0-9a-fA-F]+)$/u.test(query);
       if (addressLike) {
         await navigateAddress(query);
         return;
       }
 
-      const lowered = query.toLowerCase();
-      const procedure = procedures.find((item) => !item.external && item.name.toLowerCase() === lowered)
-        ?? procedures.find((item) => !item.external && item.name.toLowerCase().includes(lowered));
+      const procedure = local.find((item) => item.name.toLowerCase().includes(lowered) ||
+        annotations.aliases[item.address]?.toLowerCase().includes(lowered));
       if (procedure) {
         await selectProcedure(procedure);
         return;
@@ -535,7 +545,7 @@ export default function App() {
     <div className="app-shell">
       <header className="topbar">
         <div className="brand">
-          <span className="mark">AX</span>
+          <span className="mark">HS</span>
           <div>
             <h1>HexScry</h1>
             <p>evidence-first reverse engineering workbench</p>
@@ -779,12 +789,15 @@ export default function App() {
                       title={procedure.external ? "External functions have no local body to decompile." : `Analyze ${procedure.name}`}
                     >
                       <code>{procedure.address}</code>
-                      <span className="procedure-name">{procedure.name}</span>
+                      <span className="procedure-name" title={procedure.name}>{annotations.aliases[procedure.address] || procedure.name}</span>
                       <span className={`kind-badge ${procedure.external ? "external" : "local"}`}>
                         {procedure.external ? "external" : procedure.thunk ? "thunk" : "local"}
                       </span>
                     </button>
                   ))}
+                  {procedures.length > 0 && visibleProcedures.length === 0 && (
+                    <p className="muted">No matching procedures.</p>
+                  )}
                   {procedures.length === 0 && !deepBusy && (
                     <p className="muted">Run deep analysis to populate Ghidra's function inventory.</p>
                   )}
@@ -828,8 +841,9 @@ export default function App() {
                               />
                             </label>
                             <label>
-                              <span>Comment</span>
+                              <span id="analyst-comment-label">Comment</span>
                               <textarea
+                                aria-labelledby="analyst-comment-label"
                                 maxLength={4000}
                                 value={annotations.comments[dossier.procedure.address] ?? ""}
                                 onChange={(event) => updateAnnotation("comments", dossier.procedure.address, event.target.value)}
