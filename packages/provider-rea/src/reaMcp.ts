@@ -29,9 +29,32 @@ function cleanEnvironment(environment: NodeJS.ProcessEnv): Record<string, string
   );
 }
 
+function asRecord(value: unknown): Record<string, unknown> | undefined {
+  if (value && typeof value === "object" && !Array.isArray(value)) return value as Record<string, unknown>;
+  return undefined;
+}
+
+function diagnosticMessage(value: unknown): string | undefined {
+  const error = asRecord(asRecord(value)?.error);
+  if (!error) return undefined;
+  const details = asRecord(error.details);
+  const rejections = details?.rejections;
+  if (Array.isArray(rejections) && typeof details?.requested_provider_id === "string") {
+    const selected = rejections.map(asRecord).find((entry) => entry?.provider_id === details.requested_provider_id);
+    const probe = asRecord(asRecord(selected?.diagnostics)?.java_probe_failure);
+    if (probe?.process_error_code === "ETIMEDOUT") {
+      return "The Java runtime check timed out. Retry when the machine is less busy.";
+    }
+    if (typeof selected?.reason === "string" && selected.reason.trim()) return selected.reason.trim();
+  }
+  return typeof error.message === "string" ? error.message.trim() : undefined;
+}
+
 function providerErrorDetail(reply: unknown): string | null {
   if (!reply || typeof reply !== "object" || Array.isArray(reply)) return null;
   const response = reply as Record<string, unknown>;
+  const diagnostic = diagnosticMessage(response.structuredContent);
+  if (diagnostic) return diagnostic;
   const textParts = Array.isArray(response.content)
     ? response.content.flatMap((item) => {
         if (!item || typeof item !== "object" || Array.isArray(item)) return [];
@@ -39,7 +62,18 @@ function providerErrorDetail(reply: unknown): string | null {
         return typeof record.text === "string" && record.text.trim() ? [record.text.trim()] : [];
       })
     : [];
-  if (textParts.length > 0) return textParts.join(" ");
+  if (textParts.length > 0) {
+    const text = textParts.join(" ");
+    if (text.startsWith("{")) {
+      try {
+        const summary = diagnosticMessage(JSON.parse(text));
+        if (summary) return summary;
+      } catch {
+        // Some provider errors are plain text that begins with a brace.
+      }
+    }
+    return text;
+  }
 
   if (response.structuredContent && typeof response.structuredContent === "object" && !Array.isArray(response.structuredContent)) {
     const record = response.structuredContent as Record<string, unknown>;

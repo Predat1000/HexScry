@@ -231,3 +231,19 @@ test("uses structured provider detail without inventing a setup diagnosis", () =
   assert.match(error.message, /Unsupported target language/);
   assert.doesNotMatch(error.message, /Verify Ghidra|Verify a compatible JDK/);
 });
+
+test("summarizes a timed-out Java probe for the requested provider", () => {
+  const report = { error: { message: "Provider unavailable", details: {
+    requested_provider_id: "ghidra", rejections: [
+      { provider_id: "other", reason: "Other launcher missing" },
+      { provider_id: "ghidra", reason: "Update JAVA_HOME", diagnostics: {
+        java_probe_failure: { process_error_code: "ETIMEDOUT", output: "private system settings" },
+      } },
+    ],
+  } } };
+  for (const reply of [{ structuredContent: report }, { content: [{ text: JSON.stringify(report) }] }]) {
+    const error = __mcpTest.providerFailure("open_binary", reply);
+    assert.match(error.message, /Java runtime check timed out/);
+    assert.doesNotMatch(error.message, /private system settings|JAVA_HOME|Other launcher|Verify Ghidra/);
+  }
+});
