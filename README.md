@@ -80,6 +80,8 @@ After the development checks above, run `npm run demo`. The sample is a small ex
 3. Enter `0x140001001` in the navigation box. It points at the second byte of XOR. Compare the instruction status with the status at `0x140001000` to see how HexScry distinguishes a byte address from an instruction boundary.
 4. Select `entry`, give it an alias, add a comment and save the project. Reopen it, select the original binary if prompted (its SHA-256 must match), and run deep analysis again to recover your annotated function.
 
+Follow the [bzip2recover walkthrough](docs/BZIP2RECOVER_WALKTHROUGH.md) to investigate a real Windows binary from an error string to its failure branch.
+
 ### Release verification (Windows)
 
 ```powershell
