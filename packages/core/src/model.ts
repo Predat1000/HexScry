@@ -10,6 +10,7 @@ export interface SectionInfo {
 }
 
 export interface ExtractedString {
+  address?: string;
   offset: number;
   value: string;
 }

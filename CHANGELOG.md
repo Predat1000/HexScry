@@ -2,6 +2,12 @@
 
 All notable public changes to HexScry will be documented here. The project follows Semantic Versioning once public prereleases begin.
 
+## 0.1.0-alpha.2
+
+- Click a mapped printable string after deep analysis to inspect its references. Click an incoming source address to inspect the instruction using it.
+- Follow a real bzip2recover investigation in the walkthrough linked from the README.
+- Java probe timeouts now identify the slow check and omit unrelated provider diagnostics.
+
 ## 0.1.0-alpha.1
 
 ### Added

@@ -865,6 +865,22 @@ export function parsePortableExecutable(path: string, buffer: Buffer): BinaryRep
   const debugResult = parseDebugDirectory(buffer, format, optional, optionalSize, sections, sizeOfHeaders);
   const tlsResult = parseTlsDirectory(buffer, format, optional, optionalSize, sections, sizeOfHeaders, imageBaseValue);
   const strings = extractAsciiStrings(buffer);
+  // Windows images support up to 96 sections. Keep malformed inputs cheap and
+  // only offer a jump when the entire string fits one file-backed section.
+  if (sections.length <= 96) {
+    for (const entry of strings) {
+      const matches = sections.filter((section) => {
+        const delta = entry.offset - section.rawOffset;
+        const mappedSize = Math.min(section.rawSize, section.virtualSize || section.rawSize);
+        return delta >= 0 && delta + entry.value.length <= mappedSize;
+      });
+      const section = matches[0];
+      if (section && matches.length === 1) {
+        const rva = section.virtualAddress + (entry.offset - section.rawOffset);
+        entry.address = `0x${(imageBaseValue + BigInt(rva)).toString(16)}`;
+      }
+    }
+  }
   const limitations: string[] = [
     ...importResult.limitations,
     ...exportResult.limitations,

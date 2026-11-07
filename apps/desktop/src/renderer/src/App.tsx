@@ -148,7 +148,11 @@ function HexComparison({ window, report }: { window: HexWindowResult; report: Bi
   );
 }
 
-function InstructionView({ instruction }: { instruction: InstructionInspection }) {
+function InstructionView({ instruction, onNavigate, busy }: {
+  instruction: InstructionInspection;
+  onNavigate: (address: string) => void;
+  busy: boolean;
+}) {
   const incoming = instruction.incomingReferences;
   return (
     <div className="instruction-view">
@@ -189,7 +193,9 @@ function InstructionView({ instruction }: { instruction: InstructionInspection }
           {incoming?.length === 0 && <p className="muted">No incoming references reported.</p>}
           {incoming?.map((reference, index) => (
             <div className="instruction-ref" key={`in-${reference.sourceAddress ?? "unknown"}-${index}`}>
-              <code>{reference.sourceAddress ?? "unknown source"}</code>
+              <code>{reference.sourceAddress ? (
+                <button className="evidence-link" disabled={busy} onClick={() => onNavigate(reference.sourceAddress!)}>{reference.sourceAddress}</button>
+              ) : "unknown source"}</code>
               <span>{reference.type}</span>
               <small>{reference.tags.join(" · ") || `operand ${reference.operandIndex}`}</small>
             </div>
@@ -787,7 +793,11 @@ export default function App() {
                 {visibleStrings.map((entry) => (
                   <div className="string-row" key={`${entry.offset}-${entry.value}`}>
                     <code>{hex(entry.offset)}</code>
-                    <span>{entry.value}</span>
+                    <span>{entry.address ? (
+                      <button className="evidence-link string-link" disabled={procedures.length === 0 || navBusy}
+                        title={procedures.length ? `Inspect string at ${entry.address}` : "Run deep analysis to inspect string references."}
+                        onClick={() => void navigateEvidenceAddress(entry.address!)}>{entry.value}</button>
+                    ) : entry.value}</span>
                   </div>
                 ))}
                 {visibleStrings.length === 0 && <p className="muted">No matching strings.</p>}
@@ -906,7 +916,7 @@ export default function App() {
                       )}
 
                       {codeView === "instruction" ? (
-                        instruction ? <InstructionView instruction={instruction} /> : <p className="muted">No exact instruction inspection is loaded.</p>
+                        instruction ? <InstructionView instruction={instruction} onNavigate={navigateEvidenceAddress} busy={navBusy} /> : <p className="muted">No exact instruction inspection is loaded.</p>
                       ) : codeView === "references" ? (
                         dossier ? (
                           <div className="xref-view">

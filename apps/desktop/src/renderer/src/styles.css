@@ -166,6 +166,7 @@ dt { color: #727b8a; } dd { margin: 0; text-align: right; font-family: ui-monosp
 
 .strings-list { overflow: auto; }
 .string-row { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 12px; padding: 7px 16px; border-bottom: 1px solid #181c23; font-size: 12px; }
+.string-link { text-align: left; overflow-wrap: anywhere; max-width: 100%; }
 .string-row code { color: #697386; }
 .string-row span { overflow-wrap: anywhere; color: #c4cad4; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
 .muted { color: #687180; padding: 16px; }
