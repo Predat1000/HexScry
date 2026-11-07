@@ -1,6 +1,6 @@
 {
   "name": "hexscry",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "private": true,
   "description": "Open-source reverse engineering workbench for evidence-first human and AI-assisted analysis.",
   "license": "MPL-2.0",

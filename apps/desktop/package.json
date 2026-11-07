@@ -1,6 +1,6 @@
 {
   "name": "@hexscry/desktop",
-  "version": "0.1.0-alpha.1",
+  "version": "0.1.0-alpha.2",
   "private": true,
   "description": "Evidence-first reverse engineering workbench.",
   "author": "HexScry contributors",
